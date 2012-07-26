@@ -1,0 +1,14 @@
+name = Commerce Extra Panes
+description = Allows to add extra panes to Drupal Commerce checkout phase using existing entities
+package = Commerce (contrib)
+core = 7.x
+dependencies[] = commerce_checkout
+dependencies[] = ctools
+dependencies[] = entity
+
+; Information added by drupal.org packaging script on 2012-05-08
+version = "7.x-1.0"
+core = "7.x"
+project = "commerce_extra_panes"
+datestamp = "1336471855"
+

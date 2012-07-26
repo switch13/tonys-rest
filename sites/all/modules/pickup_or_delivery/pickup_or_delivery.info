@@ -1,0 +1,6 @@
+name = Pickup or Delivery
+description = Creates a checkout pane on the initial Checkout page that gives the user the option to either pickup their order for have it delivered.
+core = 7.x
+package = Commerce (shipping)
+dependencies[] = commerce
+dependencies[] = commerce_shipping
