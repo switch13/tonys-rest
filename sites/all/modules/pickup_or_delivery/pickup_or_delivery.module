@@ -58,6 +58,14 @@ function pickup_or_delivery_commerce_checkout_pane_info() {
 }
 */
 
+/*
+* Hook hook_commerce_checkout_page_info_alter($checkout_pages)
+*/
+function pickup_or_delivery_commerce_checkout_page_info_alter(&$checkout_pages) {
+  $checkout_pages['shipping']['title'] = 'Customer information';
+  //dpm($checkout_pages);
+}
+
 
 /*
 * Hook hook_commerce_checkout_pane_info_alter($checkout_pane)
@@ -68,19 +76,24 @@ function pickup_or_delivery_commerce_checkout_pane_info_alter(&$checkout_pane) {
     foreach($checkout_pane as $pane_name => &$pane_data) {
         // ...we only need to override one of them
         if($pane_name == 'customer_profile_shipping' && $pane_data['enabled']) {
+			//changing the title from shipping information to delivery information
+			$pane_data['title'] = 'Delivery information';
             // load current order
             $order = commerce_cart_order_load($user->uid);
             // array $order->data was detected with dsm()
             // it doesn't contain anything except 'shipping_method' string element
             // rules_pick_up is the ID of a cloned flat_rate shipping method
 			//dpm($order);
-            if($order->commerce_order_total['und']['0']['data']['components']['1']['name'] == 'flat_rate_pick_up') {
+            if($order->commerce_order_total['und']['0']['data']['components']['2']['name'] == 'flat_rate_pick_up') {
 			//dpm($order->commerce_order_total);
             // the pane is enabled by default, so we need to disable it
                 $pane_data['enabled'] = 0;
             }else{
 				$pane_data['enabled'] = 1;
 			}
-        }
+        }elseif($pane_name == 'commerce_shipping' && $pane_data['enabled']) {
+			//change the shipping services pane title
+			$pane_data['title'] = 'Pickup or Delivery?';
+		}
     }
 }
