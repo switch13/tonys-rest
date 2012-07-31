@@ -73,6 +73,7 @@ function pickup_or_delivery_commerce_checkout_page_info_alter(&$checkout_pages) 
 function pickup_or_delivery_commerce_checkout_pane_info_alter(&$checkout_pane) {
     global $user;
     // $checkout_pane actually holds ALL the panes...
+	//dpm($checkout_pane);
     foreach($checkout_pane as $pane_name => &$pane_data) {
         // ...we only need to override one of them
         if($pane_name == 'customer_profile_shipping' && $pane_data['enabled']) {
