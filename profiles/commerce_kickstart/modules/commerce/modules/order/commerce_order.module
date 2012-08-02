@@ -1376,6 +1376,36 @@ function commerce_order_calculate_total($order) {
 }
 
 /**
+ * Calculates the line item total for a given line item type.
+ *
+ * @see commerce_order_entity_property_info()
+ * @see commerce_line_items_total()
+ */
+function commerce_order_line_item_total($order, array $options, $name) {
+  $args = func_get_args();
+  $line_item_type = str_replace('line_item_total_', '', $name);
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $balance = commerce_line_items_total($order_wrapper->commerce_line_items, array($line_item_type));
+  return (string)$balance['amount'];
+}
+
+/**
+ * Calculate the total of all product line items
+ *
+ * @param $order
+ *   The order object containing the line items.
+ *
+ * @return string
+ *   Order balance for the product line item types only.
+ */
+function commerce_order_product_line_item_total($order) {
+  $line_item_types = commerce_product_line_item_types();
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $balance = commerce_line_items_total($order_wrapper->commerce_line_items, $line_item_types);
+  return (string)$balance['amount'];
+}
+
+/**
  * Callback for getting order properties.
  * @see commerce_order_entity_property_info()
  */

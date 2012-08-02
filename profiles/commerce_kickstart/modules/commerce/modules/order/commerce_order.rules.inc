@@ -120,6 +120,40 @@ function commerce_order_rules_condition_info() {
     ),
   );
 
+  $conditions['commerce_order_rules_condition_compare_order_total'] = array(
+      'label' => t('Order total comparison'),
+      'parameter' => array(
+        'commerce_order' => array(
+          'type' => 'commerce_order',
+          'label' => t('Order'),
+          'description' => t('The order whose total price should be compared.'),
+        ),
+        'line_item_types' => array(
+          'label' => t('Line item types'),
+          'type' => 'list<text>',
+          'description' => t('Line item types to be included in the order total to be compared. If none are selected, then all will be considered.'),
+          'options list' => 'commerce_line_item_types_options',
+          'restriction' => 'input',
+          'required' => FALSE,
+          'default value' => array_keys(commerce_line_item_types_options()),
+        ),
+        'operator' => array(
+          'type' => 'text',
+          'label' => t('Operator'),
+          'description' => t('The comparison operator to use against the order total amount.'),
+          'default value' => '>=',
+          'options list' => 'commerce_numeric_comparison_operator_options_list',
+          'restriction' => 'input',
+        ),
+        'value' => array(
+          'type' => 'integer',
+          'label' => t('Value'),
+          'description' => t('The value to compare against the order total. (This is an integer, in minor units for the currency.)'),
+        ),
+      ),
+      'group' => t('Commerce Order'),
+  );
+
   return $conditions;
 }
 
@@ -290,6 +324,39 @@ function commerce_order_rules_compare_total_quantity($order, $operator, $value) 
       return $quantity >= $value;
     case '>':
       return $quantity > $value;
+  }
+
+  return FALSE;
+}
+
+
+/**
+ * Condition callback: compares the order total against the specified quantity.
+ *
+ * If there is no order, it will just compare against 0.
+ */
+function commerce_order_rules_condition_compare_order_total($order, $line_item_types, $operator, $value) {
+  $total_amount = 0;
+  if (!empty($order)) {
+    $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+
+    if (!empty($order_wrapper->commerce_line_items)) {
+      $total = commerce_line_items_total($order_wrapper->commerce_line_items, $line_item_types);
+      $total_amount = $total['amount'];
+    }
+  }
+
+  switch ($operator) {
+    case '<':
+      return $total_amount < $value;
+    case '<=':
+      return $total_amount  <= $value;
+    case '=':
+      return $total_amount  == $value;
+    case '>=':
+      return $total_amount  >= $value;
+    case '>':
+      return $total_amount  > $value;
   }
 
   return FALSE;

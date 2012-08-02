@@ -1,0 +1,180 @@
+diff --git a/modules/line_item/commerce_line_item.module b/modules/line_item/commerce_line_item.module
+index a648a17..f954d06 100644
+--- a/modules/line_item/commerce_line_item.module
++++ b/modules/line_item/commerce_line_item.module
+@@ -429,6 +429,20 @@ function commerce_line_item_types() {
+ }
+ 
+ /**
++ * Provides a list of line item types as select options
++ *
++ * @return
++ *   Keyed array of machine_name => friendly_name of line items.
++ */
++function commerce_line_item_types_options() {
++  $options = array();
++  foreach (commerce_line_item_types() as $type => $line_item_type) {
++    $options[$type] = $line_item_type['name'];
++  }
++  return $options;
++}
++
++/**
+  * Returns a single line item type array.
+  *
+  * @param $type
+diff --git a/modules/order/commerce_order.info.inc b/modules/order/commerce_order.info.inc
+index d009fdf..d428af4 100644
+--- a/modules/order/commerce_order.info.inc
++++ b/modules/order/commerce_order.info.inc
+@@ -113,6 +113,24 @@ function commerce_order_entity_property_info() {
+     'clear' => array('mail'),
+   );
+ 
++  $properties['product_line_item_total'] = array(
++    'label' => t('Order total (products only)'),
++    'description' => t('The total amount of all product line items in the order.'),
++    'type' => 'decimal',
++    'getter callback' => 'commerce_order_product_line_item_total',
++    'computed' => TRUE,
++  );
++  $line_item_types = commerce_line_item_type_options_list();
++  foreach ($line_item_types as $line_item_type_value => $line_item_type_name) {
++    $properties['line_item_total_' . $line_item_type_value] = array(
++      'label' => t('Line item total: !type', array('!type' => $line_item_type_name)),
++      'description' => t('The total of line items of type %type associated with this order.', array('%type' => $line_item_type_name)),
++      'type' => 'decimal',
++      'getter callback' => 'commerce_order_line_item_total',
++      'computed' => TRUE,
++    );
++  }
++
+   return $info;
+ }
+ 
+diff --git a/modules/order/commerce_order.module b/modules/order/commerce_order.module
+index d7707f1..93d9114 100644
+--- a/modules/order/commerce_order.module
++++ b/modules/order/commerce_order.module
+@@ -1376,6 +1376,36 @@ function commerce_order_calculate_total($order) {
+ }
+ 
+ /**
++ * Calculates the line item total for a given line item type.
++ *
++ * @see commerce_order_entity_property_info()
++ * @see commerce_line_items_total()
++ */
++function commerce_order_line_item_total($order, array $options, $name) {
++  $args = func_get_args();
++  $line_item_type = str_replace('line_item_total_', '', $name);
++  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
++  $balance = commerce_line_items_total($order_wrapper->commerce_line_items, array($line_item_type));
++  return (string)$balance['amount'];
++}
++
++/**
++ * Calculate the total of all product line items
++ *
++ * @param $order
++ *   The order object containing the line items.
++ *
++ * @return string
++ *   Order balance for the product line item types only.
++ */
++function commerce_order_product_line_item_total($order) {
++  $line_item_types = commerce_product_line_item_types();
++  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
++  $balance = commerce_line_items_total($order_wrapper->commerce_line_items, $line_item_types);
++  return (string)$balance['amount'];
++}
++
++/**
+  * Callback for getting order properties.
+  * @see commerce_order_entity_property_info()
+  */
+diff --git a/modules/order/commerce_order.rules.inc b/modules/order/commerce_order.rules.inc
+index d496723..62295e0 100644
+--- a/modules/order/commerce_order.rules.inc
++++ b/modules/order/commerce_order.rules.inc
+@@ -120,6 +120,40 @@ function commerce_order_rules_condition_info() {
+     ),
+   );
+ 
++  $conditions['commerce_order_rules_condition_compare_order_total'] = array(
++      'label' => t('Order total comparison'),
++      'parameter' => array(
++        'commerce_order' => array(
++          'type' => 'commerce_order',
++          'label' => t('Order'),
++          'description' => t('The order whose total price should be compared.'),
++        ),
++        'line_item_types' => array(
++          'label' => t('Line item types'),
++          'type' => 'list<text>',
++          'description' => t('Line item types to be included in the order total to be compared. If none are selected, then all will be considered.'),
++          'options list' => 'commerce_line_item_types_options',
++          'restriction' => 'input',
++          'required' => FALSE,
++          'default value' => array_keys(commerce_line_item_types_options()),
++        ),
++        'operator' => array(
++          'type' => 'text',
++          'label' => t('Operator'),
++          'description' => t('The comparison operator to use against the order total amount.'),
++          'default value' => '>=',
++          'options list' => 'commerce_numeric_comparison_operator_options_list',
++          'restriction' => 'input',
++        ),
++        'value' => array(
++          'type' => 'integer',
++          'label' => t('Value'),
++          'description' => t('The value to compare against the order total. (This is an integer, in minor units for the currency.)'),
++        ),
++      ),
++      'group' => t('Commerce Order'),
++  );
++
+   return $conditions;
+ }
+ 
+@@ -295,6 +329,39 @@ function commerce_order_rules_compare_total_quantity($order, $operator, $value)
+   return FALSE;
+ }
+ 
++
++/**
++ * Condition callback: compares the order total against the specified quantity.
++ *
++ * If there is no order, it will just compare against 0.
++ */
++function commerce_order_rules_condition_compare_order_total($order, $line_item_types, $operator, $value) {
++  $total_amount = 0;
++  if (!empty($order)) {
++    $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
++
++    if (!empty($order_wrapper->commerce_line_items)) {
++      $total = commerce_line_items_total($order_wrapper->commerce_line_items, $line_item_types);
++      $total_amount = $total['amount'];
++    }
++  }
++
++  switch ($operator) {
++    case '<':
++      return $total_amount < $value;
++    case '<=':
++      return $total_amount  <= $value;
++    case '=':
++      return $total_amount  == $value;
++    case '>=':
++      return $total_amount  >= $value;
++    case '>':
++      return $total_amount  > $value;
++  }
++
++  return FALSE;
++}
++
+ /**
+  * Implements hook_rules_action_info().
+  */

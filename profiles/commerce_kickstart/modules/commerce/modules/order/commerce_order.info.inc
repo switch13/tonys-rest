@@ -113,6 +113,24 @@ function commerce_order_entity_property_info() {
     'clear' => array('mail'),
   );
 
+  $properties['product_line_item_total'] = array(
+    'label' => t('Order total (products only)'),
+    'description' => t('The total amount of all product line items in the order.'),
+    'type' => 'decimal',
+    'getter callback' => 'commerce_order_product_line_item_total',
+    'computed' => TRUE,
+  );
+  $line_item_types = commerce_line_item_type_options_list();
+  foreach ($line_item_types as $line_item_type_value => $line_item_type_name) {
+    $properties['line_item_total_' . $line_item_type_value] = array(
+      'label' => t('Line item total: !type', array('!type' => $line_item_type_name)),
+      'description' => t('The total of line items of type %type associated with this order.', array('%type' => $line_item_type_name)),
+      'type' => 'decimal',
+      'getter callback' => 'commerce_order_line_item_total',
+      'computed' => TRUE,
+    );
+  }
+
   return $info;
 }
 

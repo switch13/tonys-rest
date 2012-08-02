@@ -429,6 +429,20 @@ function commerce_line_item_types() {
 }
 
 /**
+ * Provides a list of line item types as select options
+ *
+ * @return
+ *   Keyed array of machine_name => friendly_name of line items.
+ */
+function commerce_line_item_types_options() {
+  $options = array();
+  foreach (commerce_line_item_types() as $type => $line_item_type) {
+    $options[$type] = $line_item_type['name'];
+  }
+  return $options;
+}
+
+/**
  * Returns a single line item type array.
  *
  * @param $type
