@@ -1,0 +1,210 @@
+<?php
+
+/**
+ * @file
+ * Module file for Price by components.
+ */
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function commerce_price_components_field_formatter_info() {
+  return array(
+    'commerce_price_components' => array(
+      'label' => t('Price by components'),
+      'field types' => array('commerce_price'),
+      'settings' => array(
+        'calculation' => 'calculated_sell_price',
+        'commerce_price_components' => array(
+          'base_price' => TRUE,
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function commerce_price_components_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+
+  $element = array();
+
+  if ($display['type'] == 'commerce_price_components') {
+    $element += commerce_price_components_settings_form($display['settings']);
+  }
+
+  return $element;
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function commerce_price_components_field_formatter_settings_summary($field, $instance, $view_mode) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+
+  $summary = array();
+
+  if ($display['type'] == 'commerce_price_components') {
+    $components = commerce_price_component_titles();
+    $components_included = array();
+    foreach ($settings['commerce_price_components'] as $key => $enabled) {
+      if ($enabled) {
+        $components_included[] = $components[$key];
+      }
+    }
+    if (!empty($components_included)) {
+      $summary = array(
+        t('Components included in the price: !components_included', array('!components_included' => isset($components_included) ? implode(', ', $components_included) : t('None'))),
+      );
+    }
+    else {
+      $summary = array(t('No components have been selected. Price field will display 0.'));
+    }
+  }
+
+  return implode('<br />', $summary);
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function commerce_price_components_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  if ($display['type'] == 'commerce_price_components') {
+    foreach ($items as $delta => $item) {
+      $price = $item;
+      $components = $item['data']['components'];
+
+      foreach ($components as $key => $component) {
+        if (!isset($display['settings']['commerce_price_components'][$component['name']]) || !$display['settings']['commerce_price_components'][$component['name']]) {
+          unset($components[$key]);
+        }
+      }
+      $price['data']['components'] = $components;
+      $total = commerce_price_component_total($price);
+    }
+  }
+
+  $element[] = array(
+    '#markup' => commerce_currency_format($total['amount'], $item['currency_code'], $entity),
+  );
+
+  return $element;
+}
+
+/*
+ * Implements hook_views_api().
+ */
+
+function commerce_price_components_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'commerce_price_components') . '/includes/views'
+  );
+}
+
+/**
+ * Implements hook_field_formatter_prepare_view().
+ *
+ * Rely on the default implementation of prices.
+ *
+ * @see commerce_price_field_formatter_prepare_view.
+ */
+function commerce_price_components_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, &$items, $displays) {
+  // Allow other modules to prepare the item values prior to formatting.
+  foreach (module_implements('commerce_price_field_formatter_prepare_view') as $module) {
+    $function = $module . '_commerce_price_field_formatter_prepare_view';
+    $function($entity_type, $entities, $field, $instances, $langcode, $items, $displays);
+  }
+}
+
+/**
+ * Reusable form to include in the different prices settings, formatter & views.
+ */
+function commerce_price_components_settings_form($settings) {
+  $form = array();
+  $components = commerce_price_component_titles();
+  $form['commerce_price_components'] = array(
+    '#title' => t('Components to include in the final price.'),
+    '#description' => t('When no component is selected, price displays 0.'),
+    '#type' => 'fieldset',
+  );
+  foreach ($components as $key => $component) {
+    $form['commerce_price_components'][$key] = array(
+      '#type' => 'checkbox',
+      '#title' => $component,
+      '#default_value' => isset($settings['commerce_price_components'][$key]) ? $settings['commerce_price_components'][$key] : FALSE,
+    );
+  }
+  return $form;
+}
+
+/**
+ * Implements hook_field_info_alter().
+ */
+function commerce_price_components_field_info_alter(&$info) {
+  $info['commerce_price']['property_callbacks'][] = 'commerce_price_components_property_info_callback';
+}
+
+function commerce_price_components_property_info_callback(&$info, $entity_type, $field, $instance, $field_type) {
+  $name = $field['field_name'];
+  $property = &$info[$entity_type]['bundles'][$instance['bundle']]['properties'][$name];
+  $property['property info'] = commerce_price_components_field_data_property_info();
+}
+
+function commerce_price_components_field_data_property_info($name = NULL) {
+  $property_info = commerce_price_field_data_property_info($name);
+
+  foreach (commerce_price_component_titles () as $component_name => $title) {
+    $property_info[$component_name] = array(
+      'label' => $title,
+      'description' => !empty($name) ? t('Component %component_name of field %name', array('%component_name' => $component_name, '%name' => $name)) : '',
+      'type' => 'commerce_price',
+      'getter callback' => 'commerce_price_components_get_components',
+      'property info' => array(
+        'amount' => array(
+          'label' => t('Amount'),
+          'description' => !empty($name) ? t('Amount value of field %name', array('%name' => $name)) : '',
+          'type' => 'decimal',
+          'getter callback' => 'commerce_price_components_get_component',
+          'setter callback' => 'entity_property_verbatim_set',
+        ),
+        'currency_code' => array(
+          'label' => t('Currency'),
+          'description' => !empty($name) ? t('Currency code of field %name', array('%name' => $name)) : '',
+          'type' => 'text',
+          'getter callback' => 'commerce_price_components_get_component',
+          'setter callback' => 'entity_property_verbatim_set',
+          'options list' => 'commerce_currency_code_options_list',
+        ),
+        'data' => array(
+          'label' => t('Data'),
+          'description' => !empty($name) ? t('Data array of field %name', array('%name' => $name)) : '',
+          'type' => 'struct',
+          'getter callback' => 'commerce_price_components_get_component',
+          'setter callback' => 'entity_property_verbatim_set',
+        ),
+      ),
+    );
+  }
+
+  return $property_info;
+}
+
+function commerce_price_components_get_components($data, array $options, $name, $type, $info) {
+  if (isset($name)) {
+    $component = commerce_price_component_load($data, $name);
+    if (!empty($component)) {
+      return $component;
+    }
+  }
+  return FALSE;
+}
+
+function commerce_price_components_get_component($data, array $options, $name, $type, $info) {
+  if (isset($name)) {
+    return isset($data['price'][$name]) ? $data['price'][$name] : FALSE;
+  }
+}

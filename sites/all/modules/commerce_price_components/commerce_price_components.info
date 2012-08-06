@@ -1,0 +1,17 @@
+name = Commerce price by components
+description = Components based pricing for Commerce
+package = Commerce (contrib)
+core = 7.x
+
+dependencies[] = commerce_product
+dependencies[] = commerce_price
+
+files[] = commerce_price_components.rules.inc
+files[] = includes/views/handlers/commerce_price_components_handler_area_line_item_summary.inc
+files[] = includes/views/handlers/commerce_price_components_handler_area_order_total.inc
+; Information added by drupal.org packaging script on 2012-06-09
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "commerce_price_components"
+datestamp = "1339200522"
+

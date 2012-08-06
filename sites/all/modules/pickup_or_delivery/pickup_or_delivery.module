@@ -18,7 +18,7 @@
 function pickup_or_delivery_help($path, $arg) {
   switch ($path) {
     case "admin/help#pickup_or_delivery":
-      return '<p>'.  t("Disables the Shipping information pane at checkout if the Pickup shipping service is choosen.") .'</p>';
+      return '<p>'.  t("Disables the Shipping information pane at checkout if the Pickup shipping service is choosen. Also changes the word Shipping to delivery where applicable.") .'</p>';
       break;
   }
 }
@@ -73,26 +73,40 @@ function pickup_or_delivery_commerce_checkout_page_info_alter(&$checkout_pages) 
 function pickup_or_delivery_commerce_checkout_pane_info_alter(&$checkout_pane) {
     global $user;
     // $checkout_pane actually holds ALL the panes...
-	//dpm($checkout_pane);
     foreach($checkout_pane as $pane_name => &$pane_data) {
         // ...we only need to override one of them
         if($pane_name == 'customer_profile_shipping' && $pane_data['enabled']) {
 			//changing the title from shipping information to delivery information
 			$pane_data['title'] = 'Delivery information';
+			
             // load current order
             $order = commerce_cart_order_load($user->uid);
-            // array $order->data was detected with dsm()
+	
             // it doesn't contain anything except 'shipping_method' string element
-            // rules_pick_up is the ID of a cloned flat_rate shipping method
-			//dpm($order);
+            // flat_rate_pick_up is the ID of a cloned flat_rate shipping method	
+			if ($order!=false && !empty($order->commerce_line_items)) {
+				foreach($order->commerce_order_total['und']['0']['data']['components'] as $order_component => &$component_data) {
+					if($component_data['name'] == 'flat_rate_pick_up'){
+						$pane_data['enabled'] = 0;
+					}else if($component_data['name'] == 'flat_rate_delivery_charge'){
+						$pane_data['enabled'] = 1;
+					}else if($component_data['name'] == 'flat_rate_delivery'){
+						$pane_data['enabled'] = 1;
+					}
+				}
+			}
+
+		/*	
             if($order->commerce_order_total['und']['0']['data']['components']['2']['name'] == 'flat_rate_pick_up') {
 			//dpm($order->commerce_order_total);
             // the pane is enabled by default, so we need to disable it
                 $pane_data['enabled'] = 0;
-            }else{
-				$pane_data['enabled'] = 1;
-			}
-        }elseif($pane_name == 'commerce_shipping' && $pane_data['enabled']) {
+            }
+		*/	
+        }
+	
+		//changing the shipping service title
+		if($pane_name == 'commerce_shipping' && $pane_data['enabled']) {
 			//change the shipping services pane title
 			$pane_data['title'] = 'Pickup or Delivery?';
 		}
