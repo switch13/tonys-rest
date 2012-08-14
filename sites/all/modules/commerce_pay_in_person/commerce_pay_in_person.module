@@ -1,0 +1,90 @@
+<?php
+
+/**
+ * @file
+ * Implements pay in person payment option for use with Drupal Commerce.
+ */
+
+/**
+ * Implements hook_commerce_payment_method_info().
+ */
+function commerce_pay_in_person_commerce_payment_method_info() {
+  $payment_methods = array();
+
+  $payment_methods['in_person'] = array(
+    'base' => 'commerce_pay_in_person',
+    'title' => t('Pay in person'),
+    'short_title' => t('In person'),
+    'display_title' => t('Pay in person'),
+    'description' => t('Allows users to pay for their order in person.'),
+  );
+
+  return $payment_methods;
+}
+
+/**
+ * Payment method callback: settings form.
+ */
+function commerce_pay_in_person_settings_form($settings = NULL) {
+  // Merge default settings into the stored settings array.
+  $settings = (array) $settings + array(
+    'instructions' => array(
+      'value' => '',
+      'format' => NULL,
+    ),
+  );
+
+  return array(
+    'instructions' => array(
+      '#type' => 'text_format',
+      '#title' => t('Payment instructions'),
+      '#default_value' => $settings['instructions']['value'],
+      '#format' => $settings['instructions']['format'],
+      '#required' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Payment method callback: checkout form.
+ */
+function commerce_pay_in_person_submit_form($payment_method, $pane_values, $checkout_pane, $order) {
+  return array(
+    'instructions' =>array(
+      '#type' => 'item',
+      '#markup' => check_markup($payment_method['settings']['instructions']['value'],
+        $payment_method['settings']['instructions']['format']),
+    ),
+  );
+}
+
+/**
+ * Payment method callback: submit form submission.
+ */
+function commerce_pay_in_person_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge) {
+  $order->data['in_person'] = $pane_values;
+
+  commerce_pay_in_person_transaction($payment_method, $order, $charge);
+}
+
+/**
+ * Creates a payment transaction for the specified charge amount.
+ *
+ * @param array $payment_method
+ *   The payment method instance used to charge this payment.
+ * @param stdClass $order
+ *   The order object the payment applies to.
+ * @param array $charge
+ *   An array indicating the amount and currency code to charge.
+ */
+function commerce_pay_in_person_transaction($payment_method, $order, $charge) {
+  $transaction = commerce_payment_transaction_new('in_person',
+    $order->order_id);
+  $transaction->instance_id = $payment_method['instance_id'];
+  $transaction->amount = $charge['amount'];
+  $transaction->currency_code = $charge['currency_code'];
+  $transaction->status = COMMERCE_PAYMENT_STATUS_PENDING;
+  $transaction->message = t('This order will be payed for according to the instructions provided to the user.');
+
+  commerce_payment_transaction_save($transaction);
+}
