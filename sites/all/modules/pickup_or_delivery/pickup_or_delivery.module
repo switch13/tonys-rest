@@ -81,11 +81,12 @@ function pickup_or_delivery_commerce_checkout_pane_info_alter(&$checkout_pane) {
 			$pane_data['title'] = 'Delivery information';
 			
             // load current order
+			
             $order = commerce_cart_order_load($user->uid);
-	
-            // it doesn't contain anything except 'shipping_method' string element
-            // flat_rate_pick_up is the ID of a cloned flat_rate shipping method	
+			//dpm($order);
+			//if this isn't here when you first come to the site you'll get an error because you don't have an order yet
 			if ($order!=false && !empty($order->commerce_line_items)) {
+				//drilling down into the commerce_order_total will get you the shipping service
 				foreach($order->commerce_order_total['und']['0']['data']['components'] as $order_component => &$component_data) {
 					if($component_data['name'] == 'flat_rate_pick_up'){
 						$pane_data['enabled'] = 0;
@@ -111,5 +112,67 @@ function pickup_or_delivery_commerce_checkout_pane_info_alter(&$checkout_pane) {
 			//change the shipping services pane title
 			$pane_data['title'] = 'Pickup or Delivery?';
 		}
+		/*
+		//testing the billing address hide/show enable/disable
+		if($pane_name == 'customer_profile_shipping' && $pane_data['enabled']) {
+			
+
+
+		}
+		*/
     }
 }
+
+
+
+/**
+*************************
+********TESTING AREA*****
+*************************
+
+ * Returns the payment details element for display via AJAX.
+ 
+function commerce_payment_pane_checkout_form_details_refresh($form, $form_state) {
+	return $form['commerce_payment']['payment_details'];
+}
+
+/**
+ * Implementation of hook_form_alter().
+ 
+function pickup_or_delivery_form_alter(&$form, &$form_state, $form_id) {
+	switch ($form_id)  {
+		case 'commerce_payment':
+			$form['payment_method'] = array (
+			  '#ajax' => array(
+				'callback' => 'pickup_or_delivery_commerce_payment_pane_checkout_form_details_refresh',
+				'wrapper' => 'payment-details',
+			  ),
+			);
+		break;
+	}
+}
+
+ * Returns the payment details element for display via AJAX.
+ 
+function pickup_or_delivery_commerce_payment_pane_checkout_form_details_refresh($form, $form_state) {
+	if(THE PAYMENT METHOD OPTION = CASH){
+		SET THE BILLING ADDRESS PANE TO ENABLED = FALSE;
+		AND HIDE IT VIA JQUERY;
+	}ESLE IF (THE PAYMENT METHOD OPTION = CASH){
+		SET THE BILLING ADDRESS PANE TO ENABLED = TRUE;
+		AND SHOW IT VIA JQUERY;
+	}
+	return $form['commerce_payment']['payment_details'];
+}
+
+
+*/
+
+
+
+
+
+
+
+
+
