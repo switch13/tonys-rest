@@ -2,25 +2,25 @@
 
 /**
  * @file
- * Callback functions for the Pickup or delivery's checkout pane.
+ * Callback functions for the cash or credit's checkout pane.
  */
 
 
 /**
- * Checkout pane callback: builds Pickup or delivery's radio button form.
+ * Checkout pane callback: builds cash or credit's radio button form.
  */
-function pickup_or_delivery_pane_checkout_form($form, &$form_state, $checkout_pane, $order) {
+function cash_or_credit_pane_checkout_form($form, &$form_state, $checkout_pane, $order) {
 	$pane_form = array();
 
-	$pickup = array('pickup' => t('Pickup'), 'delivery' => t('Delivery'));
+	$cash_or_credit = array('cash' => t('Cash'), 'credit' => t('Credit'));
 	
 	// Add a radios element to let the customer select whether they would like pickup or delivery.
-    $pane_form['pickup_or_delivery'] = array(
+    $pane_form['cash_or_credit'] = array(
       '#type' => 'radios',
-      '#options' => $pickup,
-      '#default_value' => variable_get('pickup_or_delivery', 'pickup'),
+      '#options' => $cash_or_credit,
+      '#default_value' => variable_get('cash_or_credit', 'credit'),
       '#ajax' => array(
-        'callback' => 'pickup_or_delivery_commerce_checkout_pane_info_alter'
+        'callback' => 'cash_or_credit_commerce_checkout_pane_info_alter'
       ),
     );
 	
@@ -31,15 +31,15 @@ function pickup_or_delivery_pane_checkout_form($form, &$form_state, $checkout_pa
 /**
  * Implements hook_commerce_checkout_pane_info_alter().
  
-function pickup_or_delivery_commerce_checkout_pane_info_alter(&$checkout_panes) {
-	$pickup_or_delivery = $form_state['values']['pickup_or_delivery'];
+function cash_or_credit_commerce_checkout_pane_info_alter(&$checkout_panes) {
+	$cash_or_credit = $form_state['values']['cash_or_credit'];
 	
-	if($pickup_or_delivery == "pickup"){
-		$checkout_panes['customer_profile_shipping']['enabled'] = 0;
-		$checkout_panes['commerce_shipping']['enabled'] = 0;
+	if($cash_or_credit == "cash"){
+		$checkout_panes['customer_profile_billing']['enabled'] = 0;
+		$checkout_panes['commerce_payment']['enabled'] = 0;
 	}else{
-		$checkout_panes['customer_profile_shipping']['enabled'] = 1;
-		$checkout_panes['commerce_shipping']['enabled'] = 1;
+		$checkout_panes['customer_profile_billing']['enabled'] = 1;
+		$checkout_panes['commerce_payment']['enabled'] = 1;
 	}
 	
 */
