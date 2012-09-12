@@ -1,0 +1,14 @@
+name = Commerce Coupon Fixed Amount
+description = "A coupon type for fixed amounts with some rules and restrictions."
+dependencies[] = commerce_coupon
+dependencies[] = number
+package = Commerce Coupon
+core = 7.x
+
+configure = admin/commerce/coupons/add/commerce-coupon-fixed
+; Information added by drupal.org packaging script on 2012-06-30
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "commerce_coupon_fixed_amount"
+datestamp = "1341014908"
+
