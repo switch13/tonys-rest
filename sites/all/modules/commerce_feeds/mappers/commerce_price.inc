@@ -51,16 +51,29 @@ function commerce_price_feeds_set_target($source, $entity, $target, $value) {
   list($field_name, $sub_field) = explode(':', $target);
   $info = field_info_field($field_name);
   $field = isset($entity->$field_name) ? $entity->$field_name : array();
+  $config = $source->importer->getConfig();
+  $entity_type = $source->importer->processor->entityType();
+
+  // Get the default currency from the field instance. Fallback to the default.
+  $currency = commerce_default_currency();
+  if ($sub_field == 'amount') {
+    $info_instance = field_info_instance($entity_type, $field_name, $entity->type);
+    if (!isset($info_instance['widget']['settings']['currency_code']) || $info_instance['widget']['settings']['currency_code'] != 'default') {
+      $currency = $info_instance['widget']['settings']['currency_code'];
+    }
+  }
 
   // Iterate over all values.
   foreach ($value as $i => $v) {
     if (!is_array($v) && !is_object($v)) {
-      // always put the default currency
-      $field[LANGUAGE_NONE][$i]['currency_code'] = commerce_default_currency();
       if ($sub_field == 'amount') {
-        $field[LANGUAGE_NONE][$i]['amount'] = (!empty($v) && is_numeric($v)) ? $v : 0;
+        $field[LANGUAGE_NONE][$i]['amount'] = (!empty($v) && is_numeric($v)) ? trim($v) : 0;
+        // If the currency code is not set yet by other mapping, set the
+        // default one.
+        if (!isset($field[LANGUAGE_NONE][$i]['currency_code'])) {
+          $field[LANGUAGE_NONE][$i]['currency_code'] = $currency;
+        }
         if (module_exists('commerce_tax')) {
-          $config = $source->importer->getConfig();
           if (!empty($config['processor']['config']['tax_rate'])) {
             $field[LANGUAGE_NONE][$i]['data']['include_tax'] = $config['processor']['config']['tax_rate'];
           }
@@ -74,6 +87,6 @@ function commerce_price_feeds_set_target($source, $entity, $target, $value) {
       break;
     }
   }
-  
+
   $entity->{$field_name} = $field;
 }

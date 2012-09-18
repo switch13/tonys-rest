@@ -7,11 +7,11 @@ dependencies[] = commerce
 
 files[] = plugins/FeedsCommerceCustomerProfileProcessor.inc
 files[] = plugins/FeedsCommerceProductProcessor.inc
+files[] = plugins/FeedsCommerceCouponProcessor.inc
 files[] = tests/commerce_feeds_processor_commerce_product.test
-
-; Information added by drupal.org packaging script on 2011-10-26
-version = "7.x-1.2"
+; Information added by drupal.org packaging script on 2012-08-31
+version = "7.x-1.3"
 core = "7.x"
 project = "commerce_feeds"
-datestamp = "1319664930"
+datestamp = "1346419306"
 

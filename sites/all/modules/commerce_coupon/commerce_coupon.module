@@ -62,6 +62,9 @@ function commerce_coupon_get_properties($coupon, array $options, $name) {
       $coupon_machine_name = commerce_coupon_machine_name_code($coupon);
       return $coupon->type . '_' . $coupon_machine_name;
       break;
+    case 'times_used':
+      return commerce_coupon_get_number_of_uses($coupon->coupon_id);
+      break;
   }
 }
 
@@ -203,6 +206,9 @@ function commerce_coupon_generate_coupon_code($length = NULL) {
 function commerce_coupon_code_is_valid($code, $order) {
   global $commerce_coupon_validation_error_message;
 
+  // Trim trailing spaces
+  $code = trim($code);
+
   $coupon = commerce_coupon_load_by_code($code);
 
   // if no such coupon found, the $code is invalid
@@ -237,12 +243,12 @@ function commerce_coupon_code_is_valid($code, $order) {
  * @param $coupon
  *   The coupon to redeem.
  * @param $order
- *   The order at which the coupon should be redeem.
+ *   The order on which the coupon should be redeemed.
  * @return void
  */
 function commerce_coupon_redeem_coupon($coupon, $order) {
   if (!isset($order->order_id) or !isset($coupon->coupon_id)) {
-    drupal_set_message(t('Your coupon code cannot be redeem.'), 'error');
+    drupal_set_message(t('Your coupon code cannot be redeemed.'), 'error');
     return;
   }
 
@@ -422,7 +428,7 @@ function commerce_coupon_type_configure($bundle, $reset) {
       'field_name' => $field_name,
       'entity_type' => $entity_type,
       'bundle' => $bundle,
-      'label' => t('Coupon Code'),
+      'label' => 'Coupon Code',
       'required' => FALSE,
       'settings' => array(),
       'display' => array(),
@@ -444,7 +450,6 @@ function commerce_coupon_type_configure($bundle, $reset) {
     $field_data = array(
       'field_name' => $field_name,
       'type' => 'number_integer',
-      'label' => t('Maximum Number of Uses'),
       'cardinality' => 1,
       'entity_types' => array($entity_type),
       'translatable' => FALSE,
@@ -465,7 +470,8 @@ function commerce_coupon_type_configure($bundle, $reset) {
       'field_name' => $field_name,
       'entity_type' => $entity_type,
       'bundle' => $bundle,
-      'label' => t('Number of Uses'),
+      'label' => 'Maximum number of Uses',
+      'description' => 'Number of times that coupon code can be used by any customer on the site, before it is set to inactive',
       'required' => FALSE,
       'display' => array(),
       'settings' => array(
@@ -575,7 +581,7 @@ function commerce_coupon_load_multiple($commerce_coupon_ids = array(), $conditio
  * Loads a coupon by its coupon code.
  *
  * @param $code
- *   An code of a coupon.
+ *   A code of a coupon.
  * @return
  *   A coupon object corresponding to the coupon code.
  */
@@ -686,7 +692,7 @@ function commerce_coupon_save($commerce_coupon) {
 /**
  * Deletes a coupon.
  *
- * @param $commerce_coupon_idd
+ * @param $commerce_coupon_id
  *   Id of the coupon to delete.
  * @return void
  */
@@ -871,7 +877,7 @@ function commerce_coupon_commerce_line_item_type_info() {
     'commerce_coupon' => array(
       'type' => 'commerce_coupon',
       'name' => t('Coupon'),
-      'description' => t('Coupon line item for fixed coupon amounts.'),
+      'description' => t('Coupon line item.'),
       'add_form_submit_value' => t('Add coupon'),
       'base' => 'commerce_coupon_line_item',
     ),

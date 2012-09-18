@@ -3,6 +3,9 @@
 /**
  * @file
  * Coupon checkout panes.
+ *
+ * Expose a textfield for entering a coupon code during checkout, and show list
+ * of coupons applied to current order.
  */
 
 /**
@@ -17,29 +20,34 @@ function commerce_coupon_pane_checkout_form($form, &$form_state, $checkout_pane,
     '#title' => t('Coupon Code'),
     '#description' => t('Enter here your coupon code.'),
   );
-
   // Extract the View and display keys from the cart contents pane setting.
-  list($view_id, $display_id) = explode('|', variable_get('commerce_coupon_review_pane_view', 'commerce_coupon_review_pane|default'));
-  if (!empty($view_id) && !empty($display_id)) {
-    $pane_form['redeemed_coupons'] = array(
-      '#type' => 'markup',
-      '#markup' => commerce_embed_view($view_id, $display_id, array($order->order_id)),
-    );
+  $pane_view = variable_get('commerce_coupon_checkout_pane_view', 'commerce_coupon_review_pane|default');
+  if ($pane_view <> 'none') {
+    list($view_id, $display_id) = explode('|', $pane_view);
+    if (!empty($view_id) && !empty($display_id)) {
+      $pane_form['redeemed_coupons'] = array(
+        '#type' => 'markup',
+        '#markup' => commerce_embed_view($view_id, $display_id, array($order->order_id)),
+      );
+    }
   }
 
   return $pane_form;
 }
 
+/**
+ * Check whether the coupon code is valid.
+ */
 function commerce_coupon_pane_checkout_form_validate($form, &$form_state, $checkout_pane, $order) {
   //@todo I think global function should start and end with an underscore
   global $commerce_coupon_validation_error_message;
 
-  // Check if it is empty
+  // Check if coupon code is empty.
   if (empty($form_state['values']['commerce_coupon']['coupon_code'])) {
     return TRUE;
   }
 
-  // Valdiate the coupon code
+  // Validate the coupon code.
   if (commerce_coupon_code_is_valid($form_state['values']['commerce_coupon']['coupon_code'], $order)) {
     return TRUE;
   }
@@ -56,8 +64,13 @@ function commerce_coupon_pane_checkout_form_validate($form, &$form_state, $check
   }
 }
 
+/**
+ * We have a valid coupon code, so submit it.
+ */
 function commerce_coupon_pane_checkout_form_submit($form, &$form_state, $checkout_pane, $order) {
-  if ($code = $form_state['values']['commerce_coupon']['coupon_code']) {
+  // Only redeem coupon if no validation errors on form and coupon code is set
+  // This prevents trying to add the same coupon twice on validation error in another pane
+  if (!form_get_errors() && $code = $form_state['values']['commerce_coupon']['coupon_code']) {
     $commerce_coupon = commerce_coupon_load_by_code($code);
     commerce_coupon_redeem_coupon($commerce_coupon, $order);
   }
@@ -93,20 +106,20 @@ function commerce_coupon_pane_settings_form($checkout_pane) {
     }
   }
 
+  $form['commerce_coupon_checkout_pane_view'] = array(
+    '#type' => 'select',
+    '#title' => t('Coupons Checkout Pane View'),
+    '#description' => t('Specify the View to use in the checkout pane under the coupon form. Select \'none\' to not display anything.'),
+    '#options' => array('none' => t('None')) + $options,
+    '#default_value' => variable_get('commerce_coupon_checkout_pane_view', 'commerce_coupon_review_pane|default'),
+  );
+
   $form['commerce_coupon_review_pane_view'] = array(
     '#type' => 'select',
     '#title' => t('Coupons Review Pane View'),
     '#description' => t('Specify the View to use in the review pane to display the coupons.'),
     '#options' => $options,
     '#default_value' => variable_get('commerce_coupon_review_pane_view', 'commerce_coupon_review_pane|default'),
-  );
-
-  $form['commerce_coupon_checkout_pane_view'] = array(
-    '#type' => 'select',
-    '#title' => t('Coupons Checkout Pane View'),
-    '#description' => t('Specify the View to use in the checkout pane under the coupon form. Leave empty to do not display anything.'),
-    '#options' => $options,
-    '#default_value' => variable_get('commerce_coupon_checkout_pane_view', 'commerce_coupon_review_pane|default'),
   );
 
   return $form;

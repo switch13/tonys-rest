@@ -33,6 +33,7 @@ class FeedsCommerceProductProcessor extends FeedsProcessor {
     $type = $this->config['product_type'];
     $product = commerce_product_new($type);
     $product->uid = $this->config['author'];
+    $product->log = 'Created by FeedsCommerceProductProcessor';
     return $product;
   }
 
@@ -41,7 +42,11 @@ class FeedsCommerceProductProcessor extends FeedsProcessor {
    */
   protected function entityLoad(FeedsSource $source, $product_id) {
     if ($this->config['update_existing'] == FEEDS_UPDATE_EXISTING) {
-      $product = commerce_product_load_by_sku($product_id);
+      $product = commerce_product_load($product_id);
+      $product->log = 'Updated by FeedsCommerceProductProcessor';
+    }
+    else {
+      $product->log = 'Replaced by FeedsCommerceProductProcessor';
     }
     return $product;
   }
@@ -115,7 +120,7 @@ class FeedsCommerceProductProcessor extends FeedsProcessor {
       $form['tax_rate'] = array(
         '#type' => 'select',
         '#title' => t('Tax rate'),
-        '#description' => t('Select the tax rate of the products to be created.'),
+        '#description' => t('Select a display inclusive tax rate to set on the product prices in import.'),
         '#options' => count($options) == 1 ? reset($options) : $options,
         '#empty_value' => TRUE,
         '#default_value' => !empty($this->config['tax_rate']) ? $this->config['tax_rate'] : '',
@@ -138,13 +143,6 @@ class FeedsCommerceProductProcessor extends FeedsProcessor {
     else {
       $values['author'] = 0;
     }
-  }
-
-  /**
-   * Override setTargetElement to operate on a target item that is a commerce product.
-   */
-  public function setTargetElement(FeedsSource $source, $target_node, $target_element, $value) {
-    parent::setTargetElement($source, $target_node, $target_element, $value);
   }
 
   /**
@@ -185,20 +183,38 @@ class FeedsCommerceProductProcessor extends FeedsProcessor {
    * Get product_id of an existing product if available.
    */
   protected function existingEntityId(FeedsSource $source, FeedsParserResult $result) {
+    if ($product_id = parent::existingEntityId($source, $result)) {
+      return $product_id;
+    }
+
     // Iterate through all unique targets and test whether they do already
     // exist in the database.
     foreach ($this->uniqueTargets($source, $result) as $target => $value) {
       switch ($target) {
+        case 'product_id':
+          $product_id = db_query("SELECT product_id FROM {commerce_product} WHERE product_id = :product_id", array(':product_id' => $value))->fetchField();
+          break;
         case 'sku':
-          $sku = db_query("SELECT sku FROM {commerce_product} WHERE sku = :sku", array(':sku' => $value))->fetchField();
+          $product_id = db_query("SELECT product_id FROM {commerce_product} WHERE sku = :sku", array(':sku' => $value))->fetchField();
           break;
       }
-      if ($sku) {
+      if ($product_id) {
         // Return with the first sku found.
-        return $sku;
+        return $product_id;
       }
     }
     return 0;
   }
 
+  /**
+   * Validate the commerce_product entity.
+   */
+  protected function entityValidate($product) {
+    if (empty($product->sku)) {
+      throw new FeedsValidationException(t('Required product SKU is missing.'));
+    }
+    else if (!commerce_product_validate_sku($product->sku)) {
+      throw new FeedsValidationException(t('Product SKU ("@sku") is invalid.', array('@sku' => $product->sku)));
+    }
+  }
 }

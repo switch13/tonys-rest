@@ -18,17 +18,32 @@ function commerce_feeds_feeds_plugins() {
       'path' => $path,
     ),
   );
-  $info['FeedsCommerceCustomerProfileProcessor'] = array(
-    'name' => 'Commerce Customer Profile processor',
-    'description' => 'Create and update commerce customer profiles.',
-    'help' => 'Create and update commerce customer profiles from parsed content.',
-    'handler' => array(
-      'parent' => 'FeedsProcessor',
-      'class' => 'FeedsCommerceCustomerProfileProcessor',
-      'file' => 'FeedsCommerceCustomerProfileProcessor.inc',
-      'path' => $path,
-    ),
-  );
+  if (module_exists('commerce_customer')) {
+    $info['FeedsCommerceCustomerProfileProcessor'] = array(
+      'name' => 'Commerce Customer Profile processor',
+      'description' => 'Create and update commerce customer profiles.',
+      'help' => 'Create and update commerce customer profiles from parsed content.',
+      'handler' => array(
+        'parent' => 'FeedsProcessor',
+        'class' => 'FeedsCommerceCustomerProfileProcessor',
+        'file' => 'FeedsCommerceCustomerProfileProcessor.inc',
+        'path' => $path,
+      ),
+    );
+  }
+  if (module_exists('commerce_coupon')) {
+    $info['FeedsCommerceCouponProcessor'] = array(
+      'name' => 'Commerce Coupon processor',
+      'description' => 'Create and update coupons.',
+      'help' => 'Create and update coupons from parsed content.',
+      'handler' => array(
+        'parent' => 'FeedsProcessor',
+        'class' => 'FeedsCommerceCouponProcessor',
+        'file' => 'FeedsCommerceCouponProcessor.inc',
+        'path' => $path,
+      ),
+    );
+  }
 
   return $info;
 }

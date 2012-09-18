@@ -16,10 +16,10 @@ files[] = classes/commerce_coupon_type.inc
 ; Views Handler
 files[] = includes/views/handlers/commerce_coupon_handler_field_coupon_granted_amount.inc
 files[] = includes/views/handlers/commerce_coupon_handler_field_coupon_operations.inc
-
-; Information added by drupal.org packaging script on 2012-06-10
-version = "7.x-1.0-beta5"
+files[] = includes/views/handlers/commerce_coupon_handler_field_times_used.inc
+; Information added by drupal.org packaging script on 2012-08-17
+version = "7.x-1.0-beta6"
 core = "7.x"
 project = "commerce_coupon"
-datestamp = "1339344679"
+datestamp = "1345200409"
 

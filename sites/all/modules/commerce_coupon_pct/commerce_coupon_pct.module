@@ -87,16 +87,11 @@ function commerce_coupon_pct_commerce_coupon_granted_amount_alter(&$amount, $cou
     $coupon_wrapper = entity_metadata_wrapper('commerce_coupon', $coupon);
 
     $amount = 0;
-    foreach ($order_wrapper->commerce_line_items as $line_item_wrapper) {
-      $currency_code = $line_item_wrapper->commerce_total->currency_code->value();
-      if (in_array($line_item_wrapper->type->value(), commerce_product_line_item_types())) {
-        $component = commerce_price_component_load($line_item_wrapper->commerce_unit_price->value(), $coupon_wrapper->price_component_name->value());
-        foreach ($component as $value) {
-          $amount += $value['price']['amount'] * -1;
-        }
-      }
+    $components = commerce_price_component_load($order_wrapper->commerce_order_total->value(), $coupon_wrapper->price_component_name->value());
+    foreach ($components as $component) {
+      $amount += $component['price']['amount'] * -1;
     }
 
-    $amount = commerce_currency_format($amount, $currency_code, $coupon);
+    $amount = commerce_currency_format($amount, $order_wrapper->commerce_order_total->currency_code->value(), $coupon);
   }
 }

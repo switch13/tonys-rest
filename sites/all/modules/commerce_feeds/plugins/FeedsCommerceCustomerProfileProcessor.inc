@@ -32,6 +32,7 @@ class FeedsCommerceCustomerProfileProcessor extends FeedsProcessor {
   protected function newEntity(FeedsSource $source) {
     $type = $this->config['customer_profile_type'];
     $profile = commerce_customer_profile_new($type, 0);
+    $profile->log = 'Created by FeedsCommerceProfileProcessor';
     return $profile;
   }
 
@@ -41,6 +42,10 @@ class FeedsCommerceCustomerProfileProcessor extends FeedsProcessor {
   protected function entityLoad(FeedsSource $source, $profile_id) {
     if ($this->config['update_existing'] == FEEDS_UPDATE_EXISTING) {
       $profile = commerce_customer_profile_load($profile_id);
+      $profile->log = 'Updated by FeedsCommerceProfileProcessor';
+    }
+    else {
+      $profile->log = 'Replaced by FeedsCommerceProfileProcessor';
     }
     return $profile;
   }
@@ -137,7 +142,7 @@ class FeedsCommerceCustomerProfileProcessor extends FeedsProcessor {
         $target_entity->uid = $value;
         break;
       default:
-        parent::setTargetElement($source, $target_node, $target_element, $value);
+        parent::setTargetElement($source, $target_entity, $target_element, $value);
         break;
     }
   }

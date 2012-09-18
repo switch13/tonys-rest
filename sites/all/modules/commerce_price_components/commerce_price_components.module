@@ -205,6 +205,7 @@ function commerce_price_components_get_components($data, array $options, $name, 
 
 function commerce_price_components_get_component($data, array $options, $name, $type, $info) {
   if (isset($name)) {
+    $data = reset($data);
     return isset($data['price'][$name]) ? $data['price'][$name] : FALSE;
   }
 }
