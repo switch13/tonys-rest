@@ -30,6 +30,32 @@ function commerce_authnet_menu() {
     'file' => 'includes/commerce_authnet.admin.inc',
   );
 
+  // Add a menu item for voiding transactions.
+  $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction/authnet-aim-void'] = array(
+    'title' => 'Void',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('commerce_authnet_aim_void_form', 3, 5),
+    'access callback' => 'commerce_authnet_aim_void_access',
+    'access arguments' => array(3, 5),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'context' => MENU_CONTEXT_INLINE,
+    'weight' => 2,
+    'file' => 'includes/commerce_authnet.admin.inc',
+  );
+
+  // Add a menu item for issuing credits.
+  $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction/authnet-aim-credit'] = array(
+    'title' => 'Credit',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('commerce_authnet_aim_credit_form', 3, 5),
+    'access callback' => 'commerce_authnet_aim_credit_access',
+    'access arguments' => array(3, 5),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'context' => MENU_CONTEXT_INLINE,
+    'weight' => 2,
+    'file' => 'includes/commerce_authnet.admin.inc',
+  );
+
   return $items;
 }
 
@@ -48,7 +74,8 @@ function commerce_authnet_menu() {
 function commerce_authnet_aim_capture_access($order, $transaction) {
   // Return FALSE if the transaction isn't for Authorize.Net AIM or isn't
   // awaiting capture.
-  if ($transaction->payment_method != 'authnet_aim' || strtoupper($transaction->remote_status) != 'AUTH_ONLY') {
+  if ($transaction->payment_method != 'authnet_aim' || empty($transaction->remote_id) ||
+    strtoupper($transaction->remote_status) != 'AUTH_ONLY') {
     return FALSE;
   }
 
@@ -57,7 +84,63 @@ function commerce_authnet_aim_capture_access($order, $transaction) {
     return FALSE;
   }
 
-  // Allow access if the user can update payments on this transaction.
+  // Allow access if the user can update this transaction.
+  return commerce_payment_transaction_access('update', $transaction);
+}
+
+/**
+ * Determines access to the void form for Authorize.Net AIM credit card
+ * transactions
+ *
+ * @param $order
+ *   The order the transaction is on.
+ * @param $transaction
+ *   The payment transaction object to be voided.
+ *
+ * @return
+ *   TRUE or FALSE indicating void access.
+ */
+function commerce_authnet_aim_void_access($order, $transaction) {
+  if ($transaction->payment_method != 'authnet_aim' || empty($transaction->remote_id) ||
+    !in_array(strtoupper($transaction->remote_status), array('AUTH_ONLY', 'PRIOR_AUTH_CAPTURE', 'AUTH_CAPTURE'))) {
+    return FALSE;
+  }
+
+  // Return FALSE if it is more than 24 hours since the last update to the
+  // transaction, as it will already have been settled.
+  if (time() - $transaction->changed > 2600 * 24) {
+    return FALSE;
+  }
+
+  // Allow access if the user can update this transaction.
+  return commerce_payment_transaction_access('update', $transaction);
+}
+
+/**
+ * Determines access to the credit form for successful Authorize.Net AIM credit
+ * card transactions.
+ *
+ * @param $order
+ *   The order the transaction is on.
+ * @param $transaction
+ *   The payment transaction object to be credited.
+ *
+ * @return
+ *   TRUE or FALSE indicating credit access.
+ */
+function commerce_authnet_aim_credit_access($order, $transaction) {
+  // Return FALSE if the transaction isn't for Authorize.Net AIM, doesn't have a
+  // success status or has an amount of 0 or less.
+  if ($transaction->payment_method != 'authnet_aim' || $transaction->status != 'success' || $transaction->amount <= 0) {
+    return FALSE;
+  }
+
+  // Return FALSE if it is more than 120 days past the original capture.
+  if (time() - $transaction->created > 86400 * 120) {
+    return FALSE;
+  }
+
+  // Allow access if the user can update this transaction.
   return commerce_payment_transaction_access('update', $transaction);
 }
 
@@ -94,6 +177,7 @@ function commerce_authnet_aim_default_settings() {
     'cim_cardonfile' => FALSE,
     'email_customer' => FALSE,
     'log' => array('request' => '0', 'response' => '0'),
+    'card_types' => array(),
   );
 }
 
@@ -101,6 +185,8 @@ function commerce_authnet_aim_default_settings() {
  * Payment method callback: settings form.
  */
 function commerce_authnet_aim_settings_form($settings = NULL) {
+  module_load_include('inc', 'commerce_payment', 'includes/commerce_payment.credit_card');
+
   // Merge default settings into the stored settings array.
   $settings = (array) $settings + commerce_authnet_aim_default_settings();
 
@@ -142,6 +228,14 @@ function commerce_authnet_aim_settings_form($settings = NULL) {
     '#default_value' => $settings['txn_type'],
   );
 
+  $form['card_types'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Limit accepted credit cards to the following types'),
+    '#description' => t('If you want to limit acceptable card types, you should only select those supported by your merchant account.') . '<br />' . t('If none are checked, any credit card type will be accepted.'),
+    '#options' => commerce_payment_credit_card_types(),
+    '#default_value' => $settings['card_types'],
+  );
+
   // CIM support in conjunction with AIM requires the Card on File module.
   if (module_exists('commerce_cardonfile')) {
     $form['cim_cardonfile'] = array(
@@ -175,7 +269,20 @@ function commerce_authnet_aim_settings_form($settings = NULL) {
  */
 function commerce_authnet_aim_submit_form($payment_method, $pane_values, $checkout_pane, $order) {
   module_load_include('inc', 'commerce_payment', 'includes/commerce_payment.credit_card');
-  return commerce_payment_credit_card_form(array('code' => ''));
+
+  // Prepare the fields to include on the credit card form.
+  $fields = array(
+    'code' => '',
+  );
+
+  // Add the credit card types array if necessary.
+  $card_types = array_diff(array_values($payment_method['settings']['card_types']), array(0));
+
+  if (!empty($card_types)) {
+    $fields['type'] = $card_types;
+  }
+
+  return commerce_payment_credit_card_form($fields);
 }
 
 /**
@@ -183,7 +290,8 @@ function commerce_authnet_aim_submit_form($payment_method, $pane_values, $checko
  */
 function commerce_authnet_aim_submit_form_validate($payment_method, $pane_form, $pane_values, $order, $form_parents = array()) {
   // If the customer specified a card on file, skip the normal validation.
-  if (module_exists('commerce_cardonfile') && $payment_method['settings']['cim_cardonfile'] && $pane_values['cardonfile'] !== 'new') {
+  if (module_exists('commerce_cardonfile') && !empty($payment_method['settings']['cim_cardonfile']) &&
+    !empty($pane_values['cardonfile']) && $pane_values['cardonfile'] !== 'new') {
     return;
   }
 
@@ -216,11 +324,47 @@ function commerce_authnet_aim_submit_form_submit($payment_method, $pane_form, $p
     $card_type = commerce_payment_validate_credit_card_type($pane_values['credit_card']['number'], array_keys(commerce_payment_credit_card_types()));
   }
 
+  // If the charge amount is 0...
+  if ($charge['amount'] == 0) {
+    // Prevent the transaction except under limited circumstances.
+    $prevent_transaction = TRUE;
+
+    // Allow 0 amount authorizations on Visa cards.
+    if ($payment_method['settings']['txn_type'] == COMMERCE_CREDIT_AUTH_ONLY && $card_type == 'visa') {
+      $prevent_transaction = FALSE;
+    }
+
+    // If the transaction should still be prevented...
+    if ($prevent_transaction) {
+      // Create a transaction to log the skipped transaction and display a
+      // helpful message to the customer.
+      $transaction = commerce_payment_transaction_new('authnet_aim', $order->order_id);
+      $transaction->amount = $charge['amount'];
+      $transaction->currency_code = $charge['currency_code'];
+      $transaction->status = COMMERCE_PAYMENT_STATUS_FAILURE;
+      $transaction->message = t('Invalid @amount transaction not attempted.', array('@amount' => commerce_currency_format($charge['amount'], $charge['currency_code'])));
+      commerce_payment_transaction_save($transaction);
+
+      drupal_set_message('We encountered an error processing your transaction. Please contact us to resolve the issue.', 'error');
+      return FALSE;
+    }
+  }
+
   $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+
+  // Get the default transaction type from the payment method settings.
+  $txn_type = $payment_method['settings']['txn_type'];
+
+  // If txn_type has been specified in the pane values array, such as through
+  // the special select element we alter onto the payment terminal form, use
+  // that instead.
+  if (!empty($pane_values['txn_type'])) {
+    $txn_type = $pane_values['txn_type'];
+  }
 
   // Build a name-value pair array for this transaction.
   $nvp = array(
-    'x_type' => commerce_authnet_txn_type($payment_method['settings']['txn_type']),
+    'x_type' => commerce_authnet_txn_type($txn_type),
     'x_method' => 'CC',
     'x_amount' => commerce_currency_amount_to_decimal($charge['amount'], $charge['currency_code']),
     'x_card_num' => $pane_values['credit_card']['number'],
@@ -296,12 +440,16 @@ function commerce_authnet_aim_submit_form_submit($payment_method, $pane_form, $p
   }
   else {
     // Set the transaction status based on the type of transaction this was.
-    switch ($payment_method['settings']['txn_type']) {
+    switch ($txn_type) {
       case COMMERCE_CREDIT_AUTH_ONLY:
         $transaction->status = COMMERCE_PAYMENT_STATUS_PENDING;
         break;
 
       case COMMERCE_CREDIT_AUTH_CAPTURE:
+        $transaction->status = COMMERCE_PAYMENT_STATUS_SUCCESS;
+        break;
+
+      case COMMERCE_CREDIT_CAPTURE_ONLY:
         $transaction->status = COMMERCE_PAYMENT_STATUS_SUCCESS;
         break;
     }
@@ -335,7 +483,8 @@ function commerce_authnet_aim_submit_form_submit($payment_method, $pane_form, $p
   }
 
   // If Card on File storage is enabled via CIM and the form says to store data...
-  if (module_exists('commerce_cardonfile') && $payment_method['settings']['cim_cardonfile'] && $pane_values['credit_card']['cardonfile_store']) {
+  if (module_exists('commerce_cardonfile') && !empty($payment_method['settings']['cim_cardonfile']) &&
+    !empty($pane_values['credit_card']['cardonfile_store']) && $pane_values['credit_card']['cardonfile_store']) {
     // Build a payment details array for the credit card.
     $payment_details = array(
       'cardNumber' => $pane_values['credit_card']['number'],
@@ -366,7 +515,7 @@ function commerce_authnet_aim_submit_form_submit($payment_method, $pane_form, $p
             'payment_method' => $payment_method['method_id'],
             'instance_id' => $payment_method['instance_id'],
             'remote_id' => $remote_id,
-            'card_type' => 'card',
+            'card_type' => !empty($card_type) ? $card_type : 'card',
             'card_name' => !empty($billing_address['name_line']) ? $billing_address['name_line'] : '',
             'card_number' => substr($pane_values['credit_card']['number'], -4),
             'card_exp_month' => $pane_values['credit_card']['exp_month'],
@@ -411,7 +560,7 @@ function commerce_authnet_aim_submit_form_submit($payment_method, $pane_form, $p
           'payment_method' => $payment_method['method_id'],
           'instance_id' => $payment_method['instance_id'],
           'remote_id' => $remote_id,
-          'card_type' => 'card',
+          'card_type' => !empty($card_type) ? $card_type : 'card',
           'card_name' => !empty($billing_address['name_line']) ? $billing_address['name_line'] : '',
           'card_number' => substr($pane_values['credit_card']['number'], -4),
           'card_exp_month' => $pane_values['credit_card']['exp_month'],
@@ -444,7 +593,7 @@ function commerce_authnet_aim_submit_form_submit($payment_method, $pane_form, $p
               'payment_method' => $payment_method['method_id'],
               'instance_id' => $payment_method['instance_id'],
               'remote_id' => $remote_id,
-              'card_type' => 'card',
+              'card_type' => !empty($card_type) ? $card_type : 'card',
               'card_name' => !empty($billing_address['name_line']) ? $billing_address['name_line'] : '',
               'card_number' => substr($pane_values['credit_card']['number'], -4),
               'card_exp_month' => $pane_values['credit_card']['exp_month'],
@@ -459,6 +608,26 @@ function commerce_authnet_aim_submit_form_submit($payment_method, $pane_form, $p
         }
       }
     }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function commerce_authnet_form_commerce_payment_order_transaction_add_form_alter(&$form, &$form_state) {
+  // If the payment terminal is displayed for an authnet_aim transaction...
+  if (!empty($form['payment_terminal']) && $form_state['payment_method']['method_id'] == 'authnet_aim') {
+    // Add a select list to let the administrator choose a different transaction
+    // type than the payment method's default.
+    $form['payment_terminal']['payment_details']['txn_type'] = array(
+        '#type' => 'select',
+        '#title' => t('Transaction type'),
+        '#options' => array(
+            COMMERCE_CREDIT_AUTH_ONLY => t('Authorization only'),
+            COMMERCE_CREDIT_AUTH_CAPTURE => t('Authorization and capture'),
+        ),
+        '#default_value' => $form_state['payment_method']['settings']['txn_type'],
+    );
   }
 }
 
@@ -621,10 +790,32 @@ function commerce_authnet_cim_cardonfile_update($form, &$form_state, $payment_me
     $number = 'XXXX' . $card_data['card_number'];
   }
 
+  // Load the payment profile so that billTo can be updated.
+  $payment_profile_xml = commerce_authnet_cim_get_customer_payment_profile_request($payment_method, $cim_customer_profile_id, $cim_payment_profile_id);
+  $billto = $payment_profile_xml->paymentProfile->billTo;
+  $first_name = (string) $billto->firstName;
+  $last_name = (string) $billto->lastName;
+  // Extract the first and last name from form values.
+  if (!empty($form_state['values']['credit_card']['owner'])) {
+    $name_parts = explode(' ', $form_state['values']['credit_card']['owner']);
+    $first_name = array_shift($name_parts);
+    $last_name = implode(' ', $name_parts);
+  }
+
   // Build the base profile update data.
   $api_request_data = array(
     'customerProfileId' => $cim_customer_profile_id,
     'paymentProfile' => array(
+      'billTo' => array(
+        'firstName' =>  substr($first_name, 0, 50),
+        'lastName' => substr($last_name, 0, 50),
+        'company' => (string) $billto->company,
+        'address' => (string) $billto->address,
+        'city' => (string) $billto->city,
+        'state' => (string) $billto->state,
+        'zip' => (string) $billto->zip,
+        'country' => (string) $billto->country,
+      ),
       'payment' => array(
         'creditCard' => array(
           'cardNumber' => $number,
@@ -1132,6 +1323,8 @@ function commerce_authnet_txn_type($txn_type) {
       return 'PRIOR_AUTH_CAPTURE';
     case COMMERCE_CREDIT_AUTH_CAPTURE:
       return 'AUTH_CAPTURE';
+    case COMMERCE_CREDIT_CAPTURE_ONLY:
+      return 'CAPTURE_ONLY';
     case COMMERCE_CREDIT_REFERENCE_SET:
     case COMMERCE_CREDIT_REFERENCE_TXN:
     case COMMERCE_CREDIT_REFERENCE_REMOVE:
@@ -1184,6 +1377,8 @@ function commerce_authnet_reverse_txn_type($txn_type) {
       return t('Prior authorization capture');
     case 'AUTH_CAPTURE':
       return t('Authorization and capture');
+    case 'CAPTURE_ONLY':
+      return t('Capture only');
     case 'CREDIT':
       return t('Credit');
     case 'VOID':

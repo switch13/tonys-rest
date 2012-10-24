@@ -1,5 +1,12 @@
 CHANGELOG - 0 Point for Drupal 7
 
+0 Point (Sep 22, 2012)
+----------------------
+
+  Bug fixes:
+    Some images not showing right in RTL languages.
+
+
 0 Point (Jul 29, 2012)
 ----------------------
 

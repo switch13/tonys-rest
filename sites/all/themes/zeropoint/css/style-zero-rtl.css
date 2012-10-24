@@ -20,7 +20,7 @@ th {
 }
 .comment .title {
 	padding: 10px 19px 12px 0;
-	background: transparent url(../images/all/icon-comment_rtl.png) right center no-repeat;
+	background: transparent url(../images/all/icon-comment_rtl.png) right center no-repeat !important;
 }
 td.section.divider {
 	border-left: none;
@@ -34,7 +34,11 @@ td.section.divider {
 	padding-right: 0;
 }
 #forum td.container {
-	background: #cdcdcd url(../images/all/forum-container_rtl.jpg) left top no-repeat;
+	background: #cdcdcd url(../images/all/forum-container_rtl.jpg) left top no-repeat !important;
+}
+#forum td.container .name a {
+	padding-right: 30px;
+	background: transparent url(../images/all/forum-link.png) right center no-repeat !important;
 }
 #continue-shopping-button {
 	margin-left: 50% !important;
@@ -43,7 +47,7 @@ div.toboggan-login-link-container {
 	padding-right: 20px;
 }
 ul li.collapsed {
-	list-style-image: url(../images/all/menu-collapsed_rtl.png);
+	list-style-image: url(../images/all/menu-collapsed_rtl.png) !important;
 }
 ul.links li {
 	border: none;

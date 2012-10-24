@@ -33,8 +33,13 @@ function commerce_extra_panes_contents_checkout_form($form, &$form_state, $check
     }
 
     $elements = entity_view($entity_type, array($entity), 'checkout_pane', $language->language, TRUE);
+    $content = theme('commerce_extra_panes_checkout_form', array('elements' => $elements));
+
+    // Replace tokens in the rendered content.
+    $content = token_replace($content, array('node' => $entity, 'commerce-order' => $order), array('language' => $language));
+
     $pane_form[$checkout_pane['pane_id']]['entity'] = array(
-      '#markup' => theme('commerce_extra_panes_checkout_form', array('elements' => $elements)),
+      '#markup' => $content,
       '#weight' => 0,
     );
   }
@@ -61,6 +66,10 @@ function commerce_extra_panes_contents_review($form, $form_state, $checkout_pane
       $entity = entity_load_single($entity_type, $translations[$language->language]->nid);
     }
   }
+
+  // Replace tokens in the rendered content.
   $entity->rendered = entity_view($entity_type, array($entity), 'checkout_pane', $language->language, TRUE);
-  return theme('commerce_extra_panes_review', array('entity' => $entity));
+  $content = theme('commerce_extra_panes_review', array('entity' => $entity));
+
+  return token_replace($content, array('node' => $entity, 'commerce-order' => $order), array('language' => $language));
 }

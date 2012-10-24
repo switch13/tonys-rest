@@ -24,17 +24,17 @@ regions[user8] = User 8
 regions[footer] = Footer
 regions[page_bottom] = Page bottom
 
-settings[style] = grey
+settings[style] = ink
 settings[layout-width] = 0
 settings[sidebarslayout] = 0
 settings[themedblocks] = 0
-settings[blockicons] = 2
+settings[blockicons] = 1
 settings[pageicons] = 1
 settings[navpos] = 0
 settings[roundcorners] = 1
 settings[headerimg] = 1
 settings[cssPreload] = 0
-settings[loginlinks] = 0
+settings[loginlinks] = 1
 settings[breadcrumb_display] = 1
 settings[search_snippet] = 1
 settings[search_info_type] = 0
@@ -46,9 +46,9 @@ settings[search_info_upload] = 1
 scripts[] = /js/jquery.hoverIntent.minified.js
 scripts[] = /js/dropdown.js
 
-; Information added by drupal.org packaging script on 2012-07-30
-version = "7.x-1.2"
+; Information added by drupal.org packaging script on 2012-09-22
+version = "7.x-1.3"
 core = "7.x"
 project = "zeropoint"
-datestamp = "1343611734"
+datestamp = "1348313850"
 

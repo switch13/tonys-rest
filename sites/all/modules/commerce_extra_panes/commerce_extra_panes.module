@@ -28,10 +28,10 @@ function commerce_extra_panes_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'includes/commerce_extra_panes.admin.inc',
   );
-  $items['admin/commerce/config/checkout/extra/%/change-status'] = array(
+  $items['admin/commerce/config/checkout/extra/%/change-status/%'] = array(
     'title' => 'Disable/enable checkout extra panes',
     'page callback' => 'commerce_extra_panes_change_status',
-    'page arguments' => array(5),
+    'page arguments' => array(5, 7),
     'access arguments' => array('administer checkout'),
     'type' => MENU_CALLBACK,
     'file' => 'includes/commerce_extra_panes.admin.inc',
@@ -61,6 +61,7 @@ function commerce_extra_panes_theme($existing, $type, $theme, $path) {
 }
 
 function theme_commerce_extra_panes_settings_list($element) {
+  $operations = array();
   $variables['header'] = array(
     'title' => array('data' => t('Title')),
     'type' => array('data' => t('Extra pane type')),
@@ -71,14 +72,33 @@ function theme_commerce_extra_panes_settings_list($element) {
   foreach ($extra_panes as $extra_pane) {
     $entity = entity_load_single($extra_pane->extra_type, $extra_pane->extra_id);
     $row = array();
-    $row[] = array('data' => $entity->title);
+    $row[] = array('data' => check_plain($entity->title));
     $row[] = array('data' => $extra_pane->extra_type);
     $status = ($extra_pane->status) ? t('Enabled') : t('Disabled');
     $row[] = array('data' => $status);
-    $operations = l(($extra_pane->status) ? t('disable') : t('enable'), 'admin/commerce/config/checkout/extra/' . $extra_pane->extra_id . '/change-status') . ' ' . l(t('delete'), 'admin/commerce/config/checkout/extra/' . $extra_pane->extra_id . '/delete');
-    $row[] = array('data' => $operations);
+
+    if (node_access('update', $entity)) {
+      $operations[] = array(
+        'href' => 'node/' . $entity->nid . '/edit',
+        'title' => t('edit'),
+        'query' => array('destination' => 'admin/commerce/config/checkout/extra'),
+      );
+    }
+    $operations[] = array(
+      'href' => l(($extra_pane->status) ? t('disable') : t('enable'), 'admin/commerce/config/checkout/extra/' . $extra_pane->extra_id . '/change-status/' . drupal_get_token($extra_pane->extra_id)),
+      'title' => ($extra_pane->status) ? t('disable') : t('enable'),
+    );
+    $operations[] = array(
+      'href' => 'admin/commerce/config/checkout/extra/' . $extra_pane->extra_id . '/delete',
+      'title' => t('delete'),
+    );
+
+    $ops = theme('links__ctools_dropbutton', array('links' => $operations, 'attributes' => array('class' => array('links', 'inline'))));
+    $row[] = array('data' => $ops);
+
     $variables['rows'][] = $row;
   }
+
   return theme('table', $variables);
 }
 
@@ -111,9 +131,10 @@ function commerce_extra_panes_commerce_checkout_pane_info() {
         if (module_exists('translation') && !empty($entity->tnid)) {
           $translations = translation_node_get_translations($entity->tnid);
           $title = isset($translations[$language->language]->title) ? $translations[$language->language]->title : $entity->title;
+          $title = check_plain($title);
         }
         $checkout_panes['extra_pane__' . $extra_pane->extra_type . '__' . $extra_pane->extra_id] = array(
-          'title' => !empty($title) ? $title : $entity->title,
+          'title' => !empty($title) ? $title : check_plain($entity->title),
           'file' => 'includes/commerce_extra_panes.checkout_pane.inc',
           'base' => 'commerce_extra_panes_contents',
         );

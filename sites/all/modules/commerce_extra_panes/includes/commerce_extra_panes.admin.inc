@@ -98,8 +98,8 @@ function commerce_extra_panes_delete_confirm_submit($form, &$form_state) {
 /**
  * Enable/disable checkout panes.
  */
-function commerce_extra_panes_change_status($extra_id) {
-  if ($extra_id) {
+function commerce_extra_panes_change_status($extra_id, $token = '') {
+  if ($extra_id && drupal_valid_token($token, $extra_id)) {
     $panes = commerce_extra_panes_get_panes($extra_id);
     $extra_pane = reset($panes);
     if ($extra_pane->status) {
