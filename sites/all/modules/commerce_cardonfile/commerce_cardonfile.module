@@ -239,45 +239,47 @@ function commerce_cardonfile_form_alter(&$form, &$form_state, $form_id) {
             );
           }
 
-          // Load any existing card data for the current payment method instance
-          // and user.
-          $stored_cards = commerce_cardonfile_data_load_multiple($form_state['account']->uid, $payment_method['instance_id']);
+          if (!user_is_anonymous()) {
+            // Load any existing card data for the current payment method instance
+            // and user.
+            $stored_cards = commerce_cardonfile_data_load_multiple($form_state['account']->uid, $payment_method['instance_id']);
 
-          // Filter out expired cards.
-          foreach ($stored_cards as $card_id => $card_data) {
-            if ($card_data['card_exp_year'] < date('Y') ||
-              $card_data['card_exp_year'] == date('Y') && $card_data['card_exp_month'] < date('m')) {
-              unset($stored_cards[$card_id]);
-            }
-          }
-
-          // If we found any stored cards, show the options in the form.
-          if (!empty($stored_cards)) {
-            $element = variable_get('commerce_cardonfile_selector', 'radios');
-            $options = commerce_cardonfile_options_list($stored_cards, $element);
-
-            $form['commerce_payment']['payment_details']['cardonfile'] = array(
-              '#type' => $element,
-              '#title' => t('Select a stored credit card'),
-              '#options' => $options,
-              '#default_value' => key($options),
-              '#weight' => -10,
-              '#ajax' => array(
-                'callback' => 'commerce_payment_pane_checkout_form_details_refresh',
-                'wrapper' => 'payment-details',
-              ),
-            );
-
-            // If the current value for the card selection element is not to use
-            // a different credit card, then hide the credit card form elements.
-            if (empty($form_state['values']) || $form_state['values']['commerce_payment']['payment_details']['cardonfile'] !== 'new') {
-              $form['commerce_payment']['payment_details']['credit_card']['#access'] = FALSE;
+            // Filter out expired cards.
+            foreach ($stored_cards as $card_id => $card_data) {
+              if ($card_data['card_exp_year'] < date('Y') ||
+                $card_data['card_exp_year'] == date('Y') && $card_data['card_exp_month'] < date('m')) {
+                unset($stored_cards[$card_id]);
+              }
             }
 
-            // Add the CSS to hide a sole credit card icon if specified.
-            if (variable_get('commerce_cardonfile_hide_cc_radio_button', TRUE)) {
-              if (count($form['commerce_payment']['payment_method']['#options']) == 1) {
-                $form['commerce_payment']['payment_method']['#attached']['css'][] = drupal_get_path('module', 'commerce_cardonfile') . '/theme/commerce_cardonfile.checkout.css';
+            // If we found any stored cards, show the options in the form.
+            if (!empty($stored_cards)) {
+              $element = variable_get('commerce_cardonfile_selector', 'radios');
+              $options = commerce_cardonfile_options_list($stored_cards, $element);
+
+              $form['commerce_payment']['payment_details']['cardonfile'] = array(
+                '#type' => $element,
+                '#title' => t('Select a stored credit card'),
+                '#options' => $options,
+                '#default_value' => key($options),
+                '#weight' => -10,
+                '#ajax' => array(
+                  'callback' => 'commerce_payment_pane_checkout_form_details_refresh',
+                  'wrapper' => 'payment-details',
+                ),
+              );
+
+              // If the current value for the card selection element is not to use
+              // a different credit card, then hide the credit card form elements.
+              if (empty($form_state['values']) || $form_state['values']['commerce_payment']['payment_details']['cardonfile'] !== 'new') {
+                $form['commerce_payment']['payment_details']['credit_card']['#access'] = FALSE;
+              }
+
+              // Add the CSS to hide a sole credit card icon if specified.
+              if (variable_get('commerce_cardonfile_hide_cc_radio_button', TRUE)) {
+                if (count($form['commerce_payment']['payment_method']['#options']) == 1) {
+                  $form['commerce_payment']['payment_method']['#attached']['css'][] = drupal_get_path('module', 'commerce_cardonfile') . '/theme/commerce_cardonfile.checkout.css';
+                }
               }
             }
           }

@@ -38,17 +38,15 @@ function commerce_addressbook_menu() {
 
   $items['user/%user/addressbook'] = array(
     'title' => 'Address Book',
-    'page callback' => 'commerce_addressbook_profile_page',
+    'page callback' => 'commerce_addressbook_page',
     'page arguments' => array(1),
-    'access callback' => 'commerce_addressbook_profile_page_access',
-    'access arguments' => array(1),
+    'access callback' => 'commerce_addressbook_page_access',
     'type' => MENU_LOCAL_TASK,
     'file' => 'includes/commerce_addressbook.user.inc',
   );
 
   // Custom administrative components for managing customer profile entities
   // from the user pages.
-  $first = TRUE;
   foreach (commerce_customer_profile_types() as $type => $profile_type) {
     $items['user/%user/addressbook/' . $type] = array(
       'page callback' => 'commerce_addressbook_profile_page',
@@ -57,16 +55,9 @@ function commerce_addressbook_menu() {
       'access arguments' => array(1, $type),
       'title' => $profile_type['name'],
       'title callback' => FALSE,
-      'type' => $first ? MENU_DEFAULT_LOCAL_TASK : MENU_LOCAL_TASK,
+      'type' => MENU_LOCAL_TASK,
       'file' => 'includes/commerce_addressbook.user.inc',
     );
-    if ($first) {
-      // The parent menu item needs to point to the first profile type.
-      $items['user/%user/addressbook']['page arguments'][] = $type;
-      $items['user/%user/addressbook']['access arguments'][] = $type;
-      $first = FALSE;
-    }
-
     $items['user/%user/addressbook/' . $type . '/create'] = array(
       'page callback' => 'commerce_addressbook_profile_create',
       'page arguments' => array(1, $type),
@@ -103,6 +94,20 @@ function commerce_addressbook_menu() {
   }
 
   return $items;
+}
+
+/**
+ * Access callback for path /user/%user/addressbook.
+ *
+ * Return the first enabled profile type if there's one, or FALSE
+ */
+function commerce_addressbook_page_access() {
+  foreach (commerce_customer_profile_types() as $type => $profile_type) {
+    if (variable_get('commerce_customer_profile_' . $type . '_addressbook', FALSE)) {
+      return $type;
+    }
+  }
+  return FALSE;
 }
 
 /**
@@ -216,16 +221,26 @@ function commerce_addressbook_entity_view($entity, $type, $view_mode, $langcode)
     $entity->content['commerce_addressbook_options'] = $links;
   }
 }
-
+/**
+ * Implements hook_entity_delete().
+ * Delete the commerce_customer_profile entity's entry from commerce_addressbook_defaults table.
+ */
+function commerce_addressbook_entity_delete($entity, $type) {
+  // Only for commerce_customer_profile entities type.
+  if ($type == 'commerce_customer_profile') {
+    list($id) = entity_extract_ids($type, $entity);
+    db_delete('commerce_addressbook_defaults')
+      ->condition('profile_id', $id)
+      ->execute();
+  }
+}
 /**
  * Implements hook_forms().
  */
 function commerce_addressbook_forms() {
   $forms = array();
+  // Define a wrapper ID for the customer profile form used by addressbook.
   $forms['commerce_addressbook_customer_profile_form'] = array(
-    'callback' => 'commerce_customer_customer_profile_form',
-  );
-  $forms['commerce_addressbook_customer_profile_options_edit'] = array(
     'callback' => 'commerce_customer_customer_profile_form',
   );
   return $forms;
@@ -304,12 +319,16 @@ function commerce_addressbook_form_alter(&$form, &$form_state, $form_id) {
     );
   }
 
-  if ($form_id == 'commerce_addressbook_customer_profile_options_edit') {
+  if ($form_id == 'commerce_addressbook_customer_profile_form') {
+    // Make sure the submit handlers run.
     rsort($form['actions']['submit']['#submit']);
     foreach ($form['actions']['submit']['#submit'] as $callback) {
       array_unshift($form['#submit'], $callback);
     }
     unset($form['actions']['submit']['#submit']);
+
+    // Hide the "Additional settings" vertical tabs.
+    $form['additional_settings']['#access'] = FALSE;
   }
 }
 
@@ -318,7 +337,15 @@ function commerce_addressbook_form_alter(&$form, &$form_state, $form_id) {
  */
 function commerce_addressbook_checkout_form_callback($form, $form_state) {
   $pane_id = $form_state['triggering_element']['#parents'][0];
-  return $form[$pane_id];
+
+  // Add replace element as default AJAX command.
+  $commands = array();
+  $commands[] = ajax_command_replace(NULL, drupal_render($form[$pane_id]));
+
+  // Allow other modules to add arbitrary AJAX commands on the refresh.
+  drupal_alter('commerce_addressbook_callback', $commands, $form, $form_state);
+
+  return array('#type' => 'ajax', '#commands' => $commands);
 }
 
 /**

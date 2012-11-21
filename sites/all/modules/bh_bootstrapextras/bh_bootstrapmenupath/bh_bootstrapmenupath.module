@@ -1,0 +1,122 @@
+<?php
+
+/**
+ * @file
+ * Provides special menu paths for use in Drupal menus in the context of
+ * bootstrap-style dropdowns.
+ *
+ * Derived from module code from the very nice Special Menu Items module
+ * which goes far beyond what we need in the bootstrap theme. Thanks to 
+ * the authors!
+ *
+ * @see http://drupal.org/project/special_menu_items
+ * @see http://twitter.github.com/bootstrap/components.html#navbar
+ */
+
+
+/**
+ * Implements hook_form_alter().
+ *
+ * @todo
+ *    Instead of modifying the #description of the link_path textfield, provide
+ *    a '#markup' item instead. 
+ */
+function bh_bootstrapmenupath_form_alter(&$form, &$form_state, $form_id) {
+  switch ($form_id) {
+    case 'menu_edit_item':
+      // Most of this block of code is taken from the theme.inc core file, between
+      // lines 79-99. Our case is simpler, because we just want to check if the
+      // default theme is bootstrap, or has bootstrap as an ancestor.
+      //
+      // Begin theme.inc snippet:
+      $themes = list_themes();
+
+      // Just find the value for default theme:
+      $theme = variable_get('theme_default', 'bartik');
+
+      // Store the identifier for retrieving theme settings with.
+      $theme_key = $theme;
+
+      // Find all our ancestor themes and put them in an array.
+      $base_theme = array();
+      $ancestor = $theme;
+      while ($ancestor && isset($themes[$ancestor]->base_theme)) {
+        $ancestor = $themes[$ancestor]->base_theme;
+        $base_theme[] = $themes[$ancestor];
+      }
+
+      // Get the most basic of the base themes (i.e. in case there are serveral
+      // items in the array):
+      $base_theme = end($base_theme);
+      // There are exactly two situations in which we want the form alter hook to
+      // actually happen--everything up to this stage has just been retrieving
+      // information:
+      //
+      //    1.  If the $base_theme is empty, AND the current theme is called
+      //        'bh_bootstrap'; OR
+      //    2.  If the name property of $base_theme itself is bootstrap
+      //
+      // Check:
+      if ((empty($base_theme) && $theme == 'bh_bootstrap') || $base_theme->name == 'bh_bootstrap') {
+        // If this theme is, or is based on, bootstrap, alter the menu item
+        // accordingly:
+        $form['link_path']['#description'] = t(
+          '<p>' . $form['link_path']['#description'] . '</p>' . '<p>If the bh_bootstrapmenupath module is enabled, and the default theme is bootstrap or a bootstrap child theme, it\'s also possible to use three other special tokens:</p><ul><li>%bootstrap-drop to make this menu item the parent to a bootstrap-style dropdown menu with no URL of it\'s own</li><li>%bootstrap-line to insert a bootstrap-style divider in a dropdown menu</li><li>%bootstrap-header to insert an un-linked header inside a bootstrap dropdown</li></ul><p>See the !bootstrap-link docs for examples and more information.</p>',
+          array(
+            '%bootstrap-drop' => '<bst-dropdown>',
+            '%bootstrap-line' => '<bst-divider>',
+            '%bootstrap-header' => '<bst-nav-header>',
+            '!bootstrap-link' => l('Bootstrap navbar', 'http://twitter.github.com/bootstrap/components.html#navbar'),
+          )
+        );
+      }
+      break;
+  }
+} // bh_bootstrapmenupath_form_alter()
+
+
+/**
+ * Implements hook_help().
+ */
+function bh_bootstrapmenupath_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'admin/help#bh_bootstrapmenupath':
+      // About:
+      $output = '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('The Bootstrap Menupath module provides menu-related functionality to enhance the BH Bootstrap theme. Specifically, it provides the following tokens that can be used in the "Path" field of menu links:') . '</p>';
+      $output .=  '<ul>';
+      $output .= '<li>' . t('%bst-dropdown to make this menu item the parent to a bootstrap-style dropdown menu with no URL of it\'s own', array('%bst-dropdown' => '<bst-dropdown>')) . '</li>';
+      $output .= '<li>' . t('%bst-divider to insert a boostrap-style horizontal divider in a dropdown menu', array('%bst-divider' => '<bst-divider>')) . '</li>';
+      $output .= '<li>' . t('%bst-nav-header to insert an un-linked header inside a bootstrap dropdown', array('%bst-nav-header' => '<bst-nav-header>')) . '</li>';
+      $output .= '</ul>';
+      break;
+  }
+  return $output;
+} // bh_bootstrapmenupath_help()
+
+
+/**
+ * Implements hook_menu().
+ */
+function bh_bootstrapmenupath_menu() {
+  $items['<bst-divider>'] = array(
+    'page callback' => 'drupal_not_found',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['<bst-dropdown>'] = array(
+    'page callback' => 'drupal_not_found',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['<bst-nav-header>'] = array(
+    'page callback' => 'drupal_not_found',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+} // bh_bootstrapmenupath()

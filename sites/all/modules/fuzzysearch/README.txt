@@ -113,6 +113,26 @@ completeness and be sorted to the bottom of your results if your search term
 exists in your content.
 
 
+=== Integration with Views ===
+
+Using views with Fuzzysearch can make your searches more powerful and accurate,
+and allows the user to control various filters provided by Views, if you wish.
+
+Enable the Search API Views module. Create a new view and choose the fuzzysearch
+index you wish to search in the "Show" dropdown list. Select other options as
+you like, create and continue to edit the view.
+
+Under fields select any fields you wish to display. Indexed Node: Title and
+Search: Excerpt are two good fields to start with.
+
+Under Filter criteria add a filter for Search: Fulltext search, select the
+fields in your index that you wish to search, and expose the filter.
+
+Under Sort criteria add a sort for Search: Relevance and set to sort descending.
+
+Add whichever Views display format you need, and save the view.
+
+
 === About Fuzzy Search ===
 
 This module provides a fuzzy matching search engine for entities using the

@@ -59,6 +59,8 @@ function commerce_addressbook_schema() {
  * Implements hook_uninstall().
  */
 function commerce_addressbook_uninstall() {
+  // Ensure the commerce_checkout module is loaded.
+  drupal_load('module', 'commerce_checkout');
   foreach (commerce_checkout_panes() as $pane_id => $checkout_pane) {
     variable_del('commerce_' . $pane_id . '_addressbook');
   }

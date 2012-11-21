@@ -146,7 +146,7 @@ function commerce_coupon_fixed_amount_form_commerce_order_ui_order_form_validate
  * Implements hook_field_attach_submit().
  */
 function commerce_coupon_fixed_amount_field_attach_submit($entity_type, $entity, $form, &$form_state) {
-  if ($entity_type == 'commerce_order') {
+  if ($entity_type == 'commerce_order' && isset($form_state['field']['commerce_coupon_order_reference'])) {
     $items = array();
     $instance = $form_state['field']['commerce_coupon_order_reference'][LANGUAGE_NONE]['instance'];
     $field = $form_state['field']['commerce_coupon_order_reference'][LANGUAGE_NONE]['field'];

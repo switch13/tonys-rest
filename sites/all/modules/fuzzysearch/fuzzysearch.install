@@ -20,12 +20,13 @@ function fuzzysearch_uninstall() {
     $query = db_select('search_api_server', 's');
     $query->addField('s', 'machine_name');
     $query->condition('class', 'fuzzysearch_service');
-    $servers = $query->execute()->fetchAssoc();
-    foreach ($servers as $server) {
-      // Delete indexes.
-      db_delete('search_api_index')
-        ->condition('server', $server)
-        ->execute();
+    if ($servers = $query->execute()->fetchAssoc()) {
+      foreach ($servers as $server) {
+        // Delete indexes.
+        db_delete('search_api_index')
+          ->condition('server', $server)
+          ->execute();
+      }
     }
   }
   db_delete('search_api_server')

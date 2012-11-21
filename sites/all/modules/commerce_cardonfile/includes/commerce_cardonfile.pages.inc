@@ -90,6 +90,7 @@ function commerce_cardonfile_update_form($form, &$form_state, $card_data) {
  * Form validate handler: update stored card data.
  */
 function commerce_cardonfile_update_form_validate($form, &$form_state) {
+  module_load_include ('inc', 'commerce_payment', 'includes/commerce_payment.credit_card');
   // Ensure non-default values are valid numbers.
   if ($form_state['values']['credit_card']['number'] != $form['credit_card']['number']['#default_value']) {
     if (!commerce_payment_validate_credit_card_number($form_state['values']['credit_card']['number'])) {

@@ -1,0 +1,12 @@
+name = Bootstrap Menupath
+description = Provides special paths for use in Drupal menus with Bootstrap-style dropdowns.
+core = 7.x
+package = BH Bootstrap
+dependencies[] = jquery_update
+;configure = admin/config/content/example
+; Information added by drupal.org packaging script on 2012-08-10
+version = "7.x-1.0-beta2"
+core = "7.x"
+project = "bh_bootstrapextras"
+datestamp = "1344637310"
+

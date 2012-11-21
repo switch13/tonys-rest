@@ -10,9 +10,9 @@ core = 7.x
 ; Simple tests
 ; files[] = tests/commerce_cardonfile.test
 
-; Information added by drupal.org packaging script on 2011-11-08
+; Information added by drupal.org packaging script on 2012-10-21
 version = "7.x-1.x-dev"
 core = "7.x"
 project = "commerce_cardonfile"
-datestamp = "1320710635"
+datestamp = "1350823172"
 

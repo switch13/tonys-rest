@@ -6,9 +6,9 @@ package = Commerce Coupon
 core = 7.x
 
 configure = admin/commerce/coupons/add/commerce-coupon-fixed
-; Information added by drupal.org packaging script on 2012-06-30
+; Information added by drupal.org packaging script on 2012-10-26
 version = "7.x-1.x-dev"
 core = "7.x"
 project = "commerce_coupon_fixed_amount"
-datestamp = "1341014908"
+datestamp = "1351255310"
 

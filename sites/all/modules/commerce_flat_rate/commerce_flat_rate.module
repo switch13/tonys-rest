@@ -134,7 +134,7 @@ function commerce_flat_rate_commerce_shipping_service_info() {
       $price_component_type = 'flat_rate_' . $name;
 
       // If the data array specifies an included tax, include it now.
-      if (!empty($data['include_tax']) && $tax_rate = commerce_tax_rate_load($data['include_tax'])) {
+      if (module_exists('commerce_tax') && !empty($data['include_tax']) && $tax_rate = commerce_tax_rate_load($data['include_tax'])) {
         // Reverse apply the tax.
         $tax_amount = $base_rate['amount'] - ($base_rate['amount'] / (1 + $tax_rate['rate']));
         $tax_amount = commerce_tax_rate_round_amount($tax_rate, $tax_amount);
