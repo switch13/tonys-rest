@@ -119,7 +119,7 @@
     '#default_value' => theme_get_setting('loginlinks'),
   );
 
-  // Breadcrumb
+// Breadcrumb
   $form['tnt_container']['general_settings']['breadcrumb'] = array(
     '#type' => 'fieldset',
     '#title' => t('Breadcrumb'),
@@ -132,7 +132,7 @@
     '#default_value' => theme_get_setting('breadcrumb_display'),
   );
 
-  // Search Settings
+// Search Settings
   if (module_exists('search')) {
     $form['tnt_container']['general_settings']['search_container'] = array(
       '#type' => 'fieldset',
@@ -172,7 +172,7 @@
       '#default_value' => theme_get_setting('search_info_upload'),
     );
 
-  // Development settings
+// Development settings
   $form['tnt_container']['themedev'] = array(
     '#type' => 'fieldset',
     '#title' => t('Theme development settings'),
@@ -187,6 +187,6 @@
     '#size' => 10,
 	);
 
-  // Return theme settings form
+// Return theme settings form
   return $form;
 }  

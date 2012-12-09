@@ -1,5 +1,11 @@
 CHANGELOG - 0 Point for Drupal 7
 
+0 Point (Nov 28, 2012)
+----------------------
+
+  Security update:
+    o #1830812: Cross site scripting through URLS in Zero Point theme
+
 0 Point (Sep 22, 2012)
 ----------------------
 
