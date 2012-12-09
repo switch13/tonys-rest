@@ -17,6 +17,22 @@ function zeropoint_preprocess_maintenance_page(&$vars) {
 function zeropoint_preprocess_html(&$vars) {
   global $theme_key, $user;
 
+// Construct page title.
+  if (drupal_get_title()) {
+    $head_title = array(
+      'title' => strip_tags(drupal_get_title()), 
+      'name' => filter_xss_admin(variable_get('site_name', 'Drupal')),
+    );
+  }
+  else {
+    $head_title = array('name' => filter_xss_admin(variable_get('site_name', 'Drupal')));
+    if (variable_get('site_slogan', '')) {
+      $head_title['slogan'] = filter_xss_admin(variable_get('site_slogan', ''));
+    }
+  }
+  $vars['head_title_array'] = $head_title;
+  $vars['head_title'] = implode(' | ', $head_title);
+
 // Add to array of helpful body classes
   $vars['classes_array'][] = ($vars['is_admin']) ? 'admin' : 'not-admin';                                     // Page user is admin
   if (isset($vars['node'])) {
@@ -33,7 +49,7 @@ function zeropoint_preprocess_html(&$vars) {
 
 // Add unique classes for each page and website section
   if (!$vars['is_front']) {
-    $path = drupal_get_path_alias($_GET['q']);
+    $path = drupal_get_path_alias(check_plain($_GET['q']));
     list($section, ) = explode('/', $path, 2);
     $vars['classes_array'][] = ('section-' . $section);
     $vars['classes_array'][] = ('page-' . $path);
@@ -89,12 +105,12 @@ $headerimg = theme_get_setting('headerimg');
 // Add language and site ID classes
   $vars['classes_array'][] = ($vars['language']->language) ? 'lg-'. $vars['language']->language : '';        // Page has lang-x
 
-$siteid = theme_get_setting('siteid');
+$siteid = check_plain(theme_get_setting('siteid'));
   $vars['classes_array'][] = $siteid;
 
 
 // Add a unique page id
-  $vars['body_id'] = 'pid-' . strtolower(preg_replace('/[^a-zA-Z0-9-]+/', '-', drupal_get_path_alias($_GET['q'])));
+  $vars['body_id'] = 'pid-' . strtolower(preg_replace('/[^a-zA-Z0-9-]+/', '-', drupal_get_path_alias(check_plain($_GET['q']))));
 
 
 // Set IE6 & IE7 stylesheets
@@ -125,17 +141,19 @@ return $style;
  * Page preprocessing
  */
 function zeropoint_preprocess_page(&$vars) {
-  // Hide breadcrumb on all pages
+// Hide breadcrumb on all pages
   if (theme_get_setting('breadcrumb_display') == 0) {
     $vars['breadcrumb'] = '';
   }
+// Construct site name and slogan.
+  $vars['site_name'] = (theme_get_setting('toggle_name') ? filter_xss_admin(variable_get('site_name', 'Drupal')) : '');
+  $vars['site_slogan'] = (theme_get_setting('toggle_name') ? filter_xss_admin(variable_get('site_slogan', '')) : '');
 }
 
 
 /**
  * Breadcrumb override
  */
-
 function zeropoint_breadcrumb($variables) {
   $breadcrumb = $variables['breadcrumb'];
   if (!empty($breadcrumb)) {
@@ -268,19 +286,19 @@ function zeropoint_preprocess_search_result(&$vars) {
 function zeropoint_field__taxonomy_term_reference($variables) {
   $output = '';
 
-  // Render the label, if it's not hidden.
+// Render the label, if it's not hidden.
   if (!$variables['label_hidden']) {
     $output .= '<div class="field-label">' . $variables['label'] . ': </div>';
   }
 
-  // Render the items.
+// Render the items.
   $output .= ($variables['element']['#label_display'] == 'inline') ? '<ul class="links inline">' : '<ul class="links">';
   foreach ($variables['items'] as $delta => $item) {
     $output .= '<li class="taxonomy-term-reference-' . $delta . '"' . $variables['item_attributes'][$delta] . '>' . drupal_render($item) . '</li>';
   }
   $output .= '</ul>';
 
-  // Render the top-level DIV.
+// Render the top-level DIV.
   $output = '<div class="' . $variables['classes'] . (!in_array('clearfix', $variables['classes_array']) ? ' clearfix' : '') . '">' . $output . '</div>';
 
   return $output;
