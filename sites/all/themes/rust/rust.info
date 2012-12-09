@@ -1,0 +1,23 @@
+name = Rust
+description = Rust subtheme
+version = 0.1
+core = 7.x
+Base theme = twitter_bootstrap
+
+regions[header]         = 'Top Bar'
+regions[highlighted]    = 'Highlighted'
+regions[help]           = 'Help'
+regions[content]        = 'Content'
+regions[sidebar_first]  = 'Primary'
+regions[sidebar_second] = 'Secondary'
+regions[footer]         = 'Footer'
+
+stylesheets[all][] css/bootstrap.css
+
+scripts[] = js/vendor/modernizr.min.js
+scripts[] = js/vendor/bootstrap.min.js
+
+settings[toggle_name] = 0
+settings[toggle_search] = 1
+
+
